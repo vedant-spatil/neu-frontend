@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.env.local
+*.log
+vite.log
+vite.pid
+# Env files: only .env.example is tracked
+.env
+.env.*
+!.env.example

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { api } from "../../api/client";
@@ -11,6 +11,7 @@ const ProjectListSchema = z.array(ProjectSummarySchema);
 
 export default function AdminProjectsPage() {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const [name, setName] = useState("");
 
   const projects = useQuery({
@@ -65,9 +66,13 @@ export default function AdminProjectsPage() {
         {projects.data && projects.data.length > 0 && (
           <ul className="divide-y divide-line">
             {projects.data.map((p) => (
-              <li key={p.id} className="flex items-center justify-between px-5 py-3 text-sm">
+              <li
+                key={p.id}
+                onClick={() => navigate(`/admin/projects/${p.id}`)}
+                className="flex cursor-pointer items-center justify-between px-5 py-3 text-sm hover:bg-page/60"
+              >
                 <span className="font-medium text-ink-900">{p.name}</span>
-                <Link to={`/admin/projects/${p.id}`} className="font-medium text-brand-600 hover:underline">Open</Link>
+                <span className="font-medium text-brand-600">Open</span>
               </li>
             ))}
           </ul>

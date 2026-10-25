@@ -109,7 +109,11 @@ export default function QaProjectDetailPage() {
               </thead>
               <tbody>
                 {accounts.data.map((a) => (
-                  <tr key={a.account_id} className="border-b border-line last:border-0">
+                  <tr
+                    key={a.account_id}
+                    onClick={() => open(a)}
+                    className="cursor-pointer border-b border-line last:border-0 hover:bg-page/60"
+                  >
                     <td className="px-5 py-3 font-mono text-xs text-ink-900">{a.account_id}</td>
                     <td className="px-5 py-3">
                       <StatusBadge status={a.status} />
@@ -117,10 +121,8 @@ export default function QaProjectDetailPage() {
                         <div className="mt-1 text-xs text-brand-600">Rejected: {rejectReasons.get(a.evaluation_id)}</div>
                       )}
                     </td>
-                    <td className="px-5 py-3 text-right">
-                      <button onClick={() => open(a)} className={buttonClass("secondary")}>
-                        {needsResubmit(a.status) ? "Resubmit" : a.status === "not_started" ? "Review" : "View"}
-                      </button>
+                    <td className="px-5 py-3 text-right text-sm font-medium text-brand-600">
+                      {needsResubmit(a.status) ? "Resubmit" : a.status === "not_started" ? "Review" : "View"}
                     </td>
                   </tr>
                 ))}

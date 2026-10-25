@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { NavLink, useNavigate } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 import { clearToken, getToken } from "../auth/session";
 import { useMe } from "../auth/useAuth";
 
@@ -26,12 +26,12 @@ export default function Header() {
     <header className="sticky top-0 z-10 border-b border-line bg-white/95 backdrop-blur">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-6 py-3">
         <div className="flex items-center gap-8">
-          <div className="flex items-center gap-2">
+          <Link to="/" className="flex items-center gap-2" aria-label="Go to dashboard">
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-sm font-bold text-white">
-              AI
+              NEU
             </span>
             <span className="font-semibold text-ink-900">AML Investigation Copilot</span>
-          </div>
+          </Link>
           <nav className="flex items-center gap-6">
             <NavLink to="/" end className={linkClass}>Dashboard</NavLink>
             <NavLink to="/alerts" className={linkClass}>Alerts</NavLink>

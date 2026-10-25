@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { api } from "../../api/client";
 import { CaseSchema, ProjectSummarySchema } from "../../api/schemas";
@@ -27,6 +27,7 @@ const STATUSES = ["open", "awaiting_review", "approved", "closed", "failed", "su
 
 export default function CasesList() {
   const me = useMe();
+  const navigate = useNavigate();
   const qc = useQueryClient();
   const isAdmin = me.data?.role === "admin";
 
@@ -196,9 +197,13 @@ export default function CasesList() {
               </thead>
               <tbody>
                 {cases.data.items.map((c) => (
-                  <tr key={c.id} className="border-b border-line last:border-0 hover:bg-page/60">
+                  <tr
+                    key={c.id}
+                    onClick={() => navigate(`/cases/${c.id}`)}
+                    className="cursor-pointer border-b border-line last:border-0 hover:bg-page/60"
+                  >
                     {isAdmin && (
-                      <td className="px-5 py-3">
+                      <td className="px-5 py-3" onClick={(e) => e.stopPropagation()}>
                         <input type="checkbox" aria-label={`Select case ${c.id}`} checked={selected.has(c.id)}
                                onChange={() => toggle(c.id)} />
                       </td>
@@ -208,7 +213,7 @@ export default function CasesList() {
                     <td className="px-5 py-3"><StatusBadge status={c.status} /></td>
                     <td className="px-5 py-3 font-semibold text-ink-900">{c.risk_score.toFixed(2)}</td>
                     <td className="px-5 py-3 text-right">
-                      <Link to={`/cases/${c.id}`} className="font-medium text-brand-600 hover:underline">Open</Link>
+                      <span className="font-medium text-brand-600">Open</span>
                     </td>
                   </tr>
                 ))}

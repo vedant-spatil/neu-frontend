@@ -119,20 +119,18 @@ export default function AlertQueue() {
               </thead>
               <tbody>
                 {alerts.data.items.map((a) => (
-                  <tr key={a.id} className="border-b border-line last:border-0 hover:bg-page/60">
+                  <tr
+                    key={a.id}
+                    onClick={() => !open.isPending && open.mutate(a.id)}
+                    className="cursor-pointer border-b border-line last:border-0 hover:bg-page/60"
+                  >
                     <td className="px-5 py-3 font-mono text-ink-900">{a.account_id}</td>
                     <td className="px-5 py-3 text-ink-900">{a.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                     <td className="px-5 py-3 text-ink-600">{a.ts.replace("T", " ").slice(0, 16)}</td>
                     <td className="px-5 py-3">{a.rules.map((r) => <RuleBadge key={r} rule={r} />)}</td>
                     <td className="px-5 py-3 font-semibold text-ink-900">{a.risk_score.toFixed(2)}</td>
-                    <td className="px-5 py-3 text-right">
-                      <button
-                        onClick={() => open.mutate(a.id)}
-                        disabled={open.isPending}
-                        className={buttonClass()}
-                      >
-                        Open case
-                      </button>
+                    <td className="px-5 py-3 text-right text-sm font-medium text-brand-600">
+                      {open.isPending && open.variables === a.id ? "Opening…" : "Open case"}
                     </td>
                   </tr>
                 ))}

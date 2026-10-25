@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import { api } from "../../api/client";
@@ -8,6 +8,7 @@ import { Card, EmptyState, ErrorState, PageHeader } from "../../components/ui";
 const ProjectListSchema = z.array(ProjectSummarySchema);
 
 export default function QaProjectsPage() {
+  const navigate = useNavigate();
   const projects = useQuery({
     queryKey: ["projects"],
     queryFn: async () => ProjectListSchema.parse(await api<unknown>("/api/projects")),
@@ -26,11 +27,13 @@ export default function QaProjectsPage() {
         {projects.data && projects.data.length > 0 && (
           <ul className="divide-y divide-line">
             {projects.data.map((p) => (
-              <li key={p.id} className="flex items-center justify-between px-5 py-3 text-sm">
+              <li
+                key={p.id}
+                onClick={() => navigate(`/qa/projects/${p.id}`)}
+                className="flex cursor-pointer items-center justify-between px-5 py-3 text-sm hover:bg-page/60"
+              >
                 <span className="font-medium text-ink-900">{p.name}</span>
-                <Link to={`/qa/projects/${p.id}`} className="font-medium text-brand-600 hover:underline">
-                  Review accounts
-                </Link>
+                <span className="font-medium text-brand-600">Review accounts</span>
               </li>
             ))}
           </ul>

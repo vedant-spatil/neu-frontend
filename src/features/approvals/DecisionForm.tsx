@@ -2,15 +2,25 @@ import { FormEvent, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import { buttonClass, Card, ErrorState } from "../../components/ui";
+import { approvalPrefill, TYPOLOGIES, type SarBody } from "./sarPrefill";
 
-const TYPOLOGIES = ["structuring", "money_mule", "funnel", "layering", "round_trip", "pass_through", "scatter_gather"];
-
-export default function DecisionForm({ caseId }: { caseId: number }) {
+export default function DecisionForm({ caseId, sar }: { caseId: number; sar?: SarBody }) {
   const [action, setAction] = useState<"approve" | "close">("close");
   const [reason, setReason] = useState("");
   const [typologies, setTypologies] = useState<string[]>([]);
   const [reviewed, setReviewed] = useState(false);
   const qc = useQueryClient();
+
+  // Choosing "Approve SAR" fills the typology and reason from the draft, but only where they are still empty.
+  // The review tick is never set here: it records a human review.
+  function chooseAction(next: "approve" | "close") {
+    setAction(next);
+    if (next === "approve") {
+      const filled = approvalPrefill(sar, { typologies, reason });
+      setTypologies(filled.typologies);
+      setReason(filled.reason);
+    }
+  }
 
   const submit = useMutation({
     mutationFn: () =>
@@ -39,11 +49,11 @@ export default function DecisionForm({ caseId }: { caseId: number }) {
         <fieldset className="flex flex-wrap gap-3">
           <legend className="mb-2 font-medium text-ink-900">Outcome</legend>
           <label className={option(action === "approve")}>
-            <input type="radio" name="action" checked={action === "approve"} onChange={() => setAction("approve")} />
+            <input type="radio" name="action" checked={action === "approve"} onChange={() => chooseAction("approve")} />
             Approve SAR
           </label>
           <label className={option(action === "close")}>
-            <input type="radio" name="action" checked={action === "close"} onChange={() => setAction("close")} />
+            <input type="radio" name="action" checked={action === "close"} onChange={() => chooseAction("close")} />
             Close
           </label>
         </fieldset>

@@ -5,8 +5,10 @@ import { api } from "../../api/client";
 import { CaseSchema, GraphSchema } from "../../api/schemas";
 import AuditTimeline from "../../components/AuditTimeline";
 import GraphView from "../../components/GraphView";
+import SarView from "../../components/SarView";
 import { Card, ErrorState, StatusBadge } from "../../components/ui";
 import DecisionForm from "../approvals/DecisionForm";
+import type { SarBody } from "../approvals/sarPrefill";
 
 const SarSchema = z.object({ version: z.number(), body: z.record(z.any()) });
 
@@ -50,25 +52,25 @@ export default function CaseDetail() {
       </div>
 
       <div className="grid gap-6 xl:grid-cols-3">
-        <Card title="Transaction graph" className="xl:col-span-2">
+        <Card id="transaction-graph" title="Transaction graph" className="xl:col-span-2">
           <GraphView elements={elements as never} />
         </Card>
         <AuditTimeline caseId={id} polling={caseQ.data.status === "open"} />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
-        <Card title={sarQ.data ? `SAR draft (v${sarQ.data.version}, redacted)` : "SAR draft"}>
-          {sarQ.data ? (
-            <pre className="max-h-96 overflow-auto rounded-xl bg-page p-4 text-xs text-ink-900">
-              {JSON.stringify(sarQ.data.body, null, 2)}
-            </pre>
-          ) : (
+        {sarQ.data ? (
+          <SarView version={sarQ.data.version} body={sarQ.data.body as SarBody} />
+        ) : (
+          <Card title="SAR draft">
             <p className="text-sm text-ink-400">
               No SAR draft. It appears once the report step finishes, or it failed (see the timeline).
             </p>
-          )}
-        </Card>
-        {caseQ.data.status === "awaiting_review" && <DecisionForm caseId={id} />}
+          </Card>
+        )}
+        {caseQ.data.status === "awaiting_review" && (
+          <DecisionForm caseId={id} sar={sarQ.data?.body as SarBody | undefined} />
+        )}
       </div>
     </div>
   );

@@ -5,12 +5,14 @@ import type { ReactNode } from "react";
  * `flush` removes the padding, for tables that should reach the card edges (the header keeps its own padding).
  */
 export function Card({
+  id,
   title,
   action,
   children,
   className = "",
   flush = false,
 }: {
+  id?: string;
   title?: ReactNode;
   action?: ReactNode;
   children: ReactNode;
@@ -19,7 +21,7 @@ export function Card({
 }) {
   const pad = flush ? "" : "p-5";
   return (
-    <section className={`rounded-2xl bg-white shadow-sm ring-1 ring-line ${pad} ${className}`}>
+    <section id={id} className={`rounded-2xl bg-white shadow-sm ring-1 ring-line ${pad} ${className}`}>
       {(title || action) && (
         <header className={`mb-4 flex items-center justify-between gap-3 ${flush ? "px-5 pt-5" : ""}`}>
           {title && <h2 className="text-base font-semibold text-ink-900">{title}</h2>}

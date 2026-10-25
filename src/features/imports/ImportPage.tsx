@@ -103,7 +103,7 @@ export default function ImportPage() {
     <div className="space-y-6">
       <PageHeader
         title="Import transactions"
-        subtitle="Admin only. Upload a CSV, match its columns to the schema, then sync. The sync checks the file, loads it and opens cases for the highest-risk alerts."
+        subtitle="Admin only. Upload a CSV, match its columns to the schema, then sync. The sync checks the file and loads it. Cases start only when an investigator opens one from the alert queue."
       />
 
       <Stepper steps={["Upload", "Map columns", "Sync"]} current={step} />

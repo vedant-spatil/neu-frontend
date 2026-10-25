@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { z } from "zod";
 import { api } from "../../api/client";
 import { AlertSchema, CaseSchema } from "../../api/schemas";
@@ -36,7 +36,8 @@ export default function AlertQueue() {
   const navigate = useNavigate();
   const [page, setPage] = useState(0);
   const [rule, setRule] = useState("");
-  const [account, setAccount] = useState("");
+  const [searchParams] = useSearchParams();
+  const [account, setAccount] = useState(searchParams.get("account") ?? "");
   const [sort, setSort] = useState("score_desc");
 
   const query = new URLSearchParams({

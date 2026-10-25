@@ -15,6 +15,7 @@ export const CaseSchema = z.object({
   alert_id: z.number(),
   status: z.string(),
   risk_score: z.number(),
+  assignee_id: z.number().nullable().optional(),
 });
 export type Case = z.infer<typeof CaseSchema>;
 

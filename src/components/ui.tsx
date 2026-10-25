@@ -78,12 +78,23 @@ const STATUS_TONE: Record<string, string> = {
   rejected: "bg-brand-50 text-brand-600",
 };
 
+// Shown labels. The stored status values don't change. "open" means the workflow is still running.
+const STATUS_LABEL: Record<string, string> = {
+  open: "Running",
+  awaiting_review: "Awaiting review",
+};
+
+const STATUS_HINT: Record<string, string> = {
+  open: "The workflow is still running: triage, flow tracer, screening, typology and the SAR draft.",
+  awaiting_review: "The workflow has finished. An investigator must approve or close the case.",
+};
+
 /** Coloured pill for a case or import status. Unknown statuses get a neutral pill. */
 export function StatusBadge({ status }: { status: string }) {
   const tone = STATUS_TONE[status] ?? "bg-line text-ink-600";
   return (
-    <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${tone}`}>
-      {status.replace(/_/g, " ")}
+    <span title={STATUS_HINT[status]} className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${tone}`}>
+      {STATUS_LABEL[status] ?? status.replace(/_/g, " ")}
     </span>
   );
 }

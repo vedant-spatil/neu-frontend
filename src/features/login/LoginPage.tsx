@@ -1,5 +1,5 @@
 import { FormEvent, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { API_BASE, ApiError } from "../../api/client";
 import { setToken } from "../../auth/session";
 import { TokenSchema } from "../../api/schemas";
@@ -10,6 +10,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
   const [params] = useSearchParams();
 
@@ -42,7 +43,7 @@ export default function LoginPage() {
       <form onSubmit={onSubmit} className="w-full max-w-sm space-y-5 rounded-2xl bg-white p-8 shadow-sm ring-1 ring-line">
         <div className="text-center">
           <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-brand-600 text-lg font-bold text-white">
-            AI
+            NEU
           </span>
           <h1 className="mt-4 text-xl font-semibold text-ink-900">Sign in</h1>
           <p className="mt-1 text-sm text-ink-600">AML Investigation Copilot</p>
@@ -53,13 +54,27 @@ export default function LoginPage() {
         </label>
         <label className="block text-sm font-medium text-ink-900">
           Password
-          <input className={field} type="password" required value={password}
-                 onChange={(e) => setPassword(e.target.value)} />
+          <div className="relative">
+            <input className={`${field} pr-16`} type={showPassword ? "text" : "password"} required value={password}
+                   onChange={(e) => setPassword(e.target.value)} />
+            <button
+              type="button"
+              aria-pressed={showPassword}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              onClick={() => setShowPassword((on) => !on)}
+              className="absolute inset-y-0 right-2 my-auto h-7 rounded-md px-2 text-xs font-medium text-ink-600 hover:bg-page hover:text-ink-900"
+            >
+              {showPassword ? "Hide" : "Show"}
+            </button>
+          </div>
         </label>
         {error && <ErrorState text={error} />}
         <button disabled={busy} className={`${buttonClass()} w-full py-2.5`}>
           {busy ? "Signing in..." : "Sign in"}
         </button>
+        <p className="text-center text-sm text-ink-600">
+          New reviewer? <Link to="/signup" className="font-medium text-brand-600 hover:underline">Create an account</Link>
+        </p>
       </form>
     </div>
   );

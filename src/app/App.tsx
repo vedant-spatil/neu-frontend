@@ -3,7 +3,9 @@ import { getToken } from "../auth/session";
 import { useMe } from "../auth/useAuth";
 import type { Role } from "../api/schemas";
 import Header from "./Header";
+import Live from "./Live";
 import LoginPage from "../features/login/LoginPage";
+import SignupPage from "../features/login/SignupPage";
 import Dashboard from "../features/dashboard/Dashboard";
 import AlertQueue from "../features/alerts/AlertQueue";
 import CaseDetail from "../features/cases/CaseDetail";
@@ -26,10 +28,10 @@ function RequireAuth({ children }: { children: JSX.Element }) {
 /** Shows the page only to the listed roles. The backend enforces the same rule on every call. */
 function RequireRole({ roles, children }: { roles: Role[]; children: JSX.Element }) {
   const me = useMe();
-  if (me.isPending) return <p className="text-sm text-slate-600">Loading…</p>;
+  if (me.isPending) return <p className="text-sm text-ink-600">Loading…</p>;
   if (me.isError || !me.data) return <Navigate to="/login" replace />;
   if (!roles.includes(me.data.role as Role)) {
-    return <p role="alert" className="text-red-600">This page is not available for your role.</p>;
+    return <p role="alert" className="text-brand-600">This page is not available for your role.</p>;
   }
   return children;
 }
@@ -38,13 +40,14 @@ export default function App() {
   return (
     <div className="min-h-screen">
       <Header />
+      <Live />
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignupPage />} />
           <Route path="/" element={<RequireAuth><Dashboard /></RequireAuth>} />
-          <Route path="/alerts" element={<RequireAuth><AlertQueue /></RequireAuth>} />
-          <Route path="/import" element={<RequireAuth><ImportPage /></RequireAuth>} />
+          <Route path="/alerts" element={<RequireAuth><RequireRole roles={["admin"]}><AlertQueue /></RequireRole></RequireAuth>} />
+          <Route path="/import" element={<RequireAuth><RequireRole roles={["admin"]}><ImportPage /></RequireRole></RequireAuth>} />
           <Route path="/cases" element={<RequireAuth><CasesList /></RequireAuth>} />
           <Route path="/cases/:caseId" element={<RequireAuth><CaseDetail /></RequireAuth>} />
           <Route path="/admin/projects" element={<RequireAuth><RequireRole roles={["admin"]}><AdminProjectsPage /></RequireRole></RequireAuth>} />

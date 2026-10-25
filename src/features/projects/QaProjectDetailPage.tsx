@@ -10,6 +10,7 @@ import {
   TagsSchema,
   type QaAccount,
 } from "../../api/schemas";
+import { buttonClass, Card, EmptyState, ErrorState, PageHeader, StatusBadge } from "../../components/ui";
 import { needsResubmit } from "./helpers";
 
 const QaAccountsSchema = z.array(QaAccountSchema);
@@ -82,90 +83,102 @@ export default function QaProjectDetailPage() {
     setPicked((cur) => (cur.includes(tag) ? cur.filter((t) => t !== tag) : [...cur, tag]));
   }
 
-  if (project.isError) return <p role="alert" className="text-red-600">Project not found.</p>;
-  if (!project.data) return <p className="text-sm text-slate-600">Loading project…</p>;
+  if (project.isError) return <ErrorState text="Project not found." />;
+  if (!project.data) return <p className="text-ink-600">Loading project…</p>;
 
   const canSubmit = selected !== null && picked.length > 0 && !submit.isPending;
   const editable = selected !== null && (selected.status === "not_started" || needsResubmit(selected.status));
 
   return (
-    <section className="space-y-6">
-      <div>
-        <h1 className="text-lg font-semibold">{project.data.name}</h1>
-        <p className="text-sm text-slate-600">Pick an account, choose tags, and submit for admin review.</p>
-      </div>
+    <div className="space-y-6">
+      <PageHeader title={project.data.name} subtitle="Pick an account, choose tags, and submit for admin review." />
 
-      {accounts.isError && <p role="alert" className="text-red-600">Could not load accounts.</p>}
-      {accounts.data && accounts.data.length === 0 && (
-        <p className="text-sm text-slate-600">No accounts in this project yet.</p>
-      )}
-      {accounts.data && accounts.data.length > 0 && (
-        <table className="w-full text-sm">
-          <thead className="text-left text-slate-600">
-            <tr>
-              <th className="py-1">Account</th>
-              <th>Status</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {accounts.data.map((a) => (
-              <tr key={a.account_id} className="border-t">
-                <td className="py-2 font-mono text-xs">{a.account_id}</td>
-                <td>
-                  {a.status}
-                  {a.evaluation_id !== null && rejectReasons.has(a.evaluation_id) && (
-                    <div className="text-xs text-red-700">Rejected: {rejectReasons.get(a.evaluation_id)}</div>
-                  )}
-                </td>
-                <td className="text-right">
-                  <button onClick={() => open(a)}
-                          className="rounded border px-2 py-1 text-xs hover:bg-slate-100">
-                    {needsResubmit(a.status) ? "Resubmit" : a.status === "not_started" ? "Review" : "View"}
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+      {accounts.isError && <ErrorState text="Could not load accounts." />}
+
+      <Card title="Accounts" flush>
+        {accounts.data && accounts.data.length === 0 && <EmptyState text="No accounts in this project yet." />}
+        {accounts.data && accounts.data.length > 0 && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-line text-left text-ink-600">
+                  <th className="px-5 py-3 font-medium">Account</th>
+                  <th className="px-5 py-3 font-medium">Status</th>
+                  <th className="px-5 py-3" />
+                </tr>
+              </thead>
+              <tbody>
+                {accounts.data.map((a) => (
+                  <tr key={a.account_id} className="border-b border-line last:border-0">
+                    <td className="px-5 py-3 font-mono text-xs text-ink-900">{a.account_id}</td>
+                    <td className="px-5 py-3">
+                      <StatusBadge status={a.status} />
+                      {a.evaluation_id !== null && rejectReasons.has(a.evaluation_id) && (
+                        <div className="mt-1 text-xs text-brand-600">Rejected: {rejectReasons.get(a.evaluation_id)}</div>
+                      )}
+                    </td>
+                    <td className="px-5 py-3 text-right">
+                      <button onClick={() => open(a)} className={buttonClass("secondary")}>
+                        {needsResubmit(a.status) ? "Resubmit" : a.status === "not_started" ? "Review" : "View"}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
 
       {selected && (
-        <div className="rounded bg-white p-4 shadow space-y-3">
-          <h2 className="font-semibold">Account <span className="font-mono text-sm">{selected.account_id}</span></h2>
-          <p className="text-sm text-slate-600">Status: {selected.status}</p>
+        <Card title={<span>Account <span className="font-mono text-sm">{selected.account_id}</span></span>}>
+          <p className="mb-4 text-sm text-ink-600">Status: <StatusBadge status={selected.status} /></p>
 
           {editable ? (
-            <>
-              <fieldset className="space-y-1 text-sm">
-                <legend className="font-medium">Tags</legend>
-                {tags.data?.tags.map((t) => (
-                  <label key={t} className="mr-4 inline-flex items-center gap-1">
-                    <input type="checkbox" checked={picked.includes(t)} onChange={() => toggleTag(t)} />
-                    {t}
-                  </label>
-                ))}
+            <div className="space-y-5 text-sm">
+              <fieldset className="flex flex-wrap gap-2">
+                <legend className="mb-2 font-medium text-ink-900">Tags</legend>
+                {tags.data?.tags.map((t) => {
+                  const checked = picked.includes(t);
+                  return (
+                    <label
+                      key={t}
+                      className={`flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 ring-1 ${
+                        checked ? "bg-brand-50 text-brand-600 ring-brand-500" : "text-ink-900 ring-line hover:bg-page"
+                      }`}
+                    >
+                      <input type="checkbox" checked={checked} onChange={() => toggleTag(t)} />
+                      {t}
+                    </label>
+                  );
+                })}
               </fieldset>
-              <label className="flex flex-col text-sm">
-                Notes
-                <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3}
-                          className="mt-1 rounded border p-2" />
+              <label className="block">
+                <span className="mb-1 block font-medium text-ink-900">Notes</span>
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  rows={3}
+                  className="w-full rounded-lg bg-white p-3 text-ink-900 ring-1 ring-line outline-none focus:ring-2 focus:ring-brand-500"
+                />
               </label>
               <div className="flex items-center gap-3">
-                <button disabled={!canSubmit}
-                        onClick={() => selected && submit.mutate({ account: selected, tags: picked, notes })}
-                        className="rounded bg-slate-900 px-3 py-1 text-white disabled:opacity-50">
+                <button
+                  disabled={!canSubmit}
+                  onClick={() => selected && submit.mutate({ account: selected, tags: picked, notes })}
+                  className={buttonClass()}
+                >
                   {needsResubmit(selected.status) ? "Resubmit" : "Submit evaluation"}
                 </button>
-                <button onClick={() => setSelected(null)} className="rounded border px-3 py-1">Cancel</button>
+                <button onClick={() => setSelected(null)} className={buttonClass("secondary")}>Cancel</button>
               </div>
-              {submit.isError && <p role="alert" className="text-red-600">Submit failed. Try again.</p>}
-            </>
+              {submit.isError && <ErrorState text="Submit failed. Try again." />}
+            </div>
           ) : (
-            <p className="text-sm text-slate-600">This account is {selected.status}. No changes needed.</p>
+            <p className="text-sm text-ink-600">This account is {selected.status}. No changes needed.</p>
           )}
-        </div>
+        </Card>
       )}
-    </section>
+    </div>
   );
 }

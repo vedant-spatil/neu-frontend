@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { z } from "zod";
 import { api } from "../../api/client";
 import { CaseSchema } from "../../api/schemas";
+import { buttonClass, Card, ErrorState, PageHeader, StatusBadge } from "../../components/ui";
 
 const PageSchema = z.object({
   total: z.number(),
@@ -33,50 +34,74 @@ export default function CasesList() {
 
   const totalPages = cases.data ? Math.max(1, Math.ceil(cases.data.total / PAGE_SIZE)) : 1;
 
-  if (cases.isLoading) return <p>Loading cases...</p>;
-  if (cases.isError) return <p role="alert">Could not load cases.</p>;
-
   return (
-    <section className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-lg font-semibold">Cases ({cases.data?.total ?? 0})</h1>
-        <label className="text-sm">
-          Status{" "}
-          <select className="rounded border px-2 py-1" value={status}
-                  onChange={(e) => { setStatus(e.target.value); setPage(0); }}>
-            <option value="">All</option>
-            {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
-        </label>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title={`Cases (${cases.data?.total ?? 0})`}
+        subtitle="Every case opened from an alert, with its current status."
+        actions={
+          <label className="flex items-center gap-2 text-sm text-ink-600">
+            Status
+            <select
+              className="rounded-lg bg-white px-3 py-2 text-ink-900 ring-1 ring-line"
+              value={status}
+              onChange={(e) => { setStatus(e.target.value); setPage(0); }}
+            >
+              <option value="">All</option>
+              {STATUSES.map((s) => <option key={s} value={s}>{s.replace(/_/g, " ")}</option>)}
+            </select>
+          </label>
+        }
+      />
 
-      <table className="w-full bg-white text-sm shadow">
-        <thead className="bg-slate-100 text-left">
-          <tr>
-            <th className="p-2">Case</th><th className="p-2">Alert</th><th className="p-2">Status</th>
-            <th className="p-2">Score</th><th className="p-2"></th>
-          </tr>
-        </thead>
-        <tbody>
-          {cases.data?.items.map((c) => (
-            <tr key={c.id} className="border-t">
-              <td className="p-2 font-mono">{c.id}</td>
-              <td className="p-2">{c.alert_id}</td>
-              <td className="p-2">{c.status}</td>
-              <td className="p-2">{c.risk_score.toFixed(2)}</td>
-              <td className="p-2"><Link to={`/cases/${c.id}`} className="underline">Open</Link></td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {cases.isError && <ErrorState text="Could not load cases." />}
+      {cases.isLoading && <p className="text-ink-600">Loading cases...</p>}
 
-      <nav className="flex items-center justify-end gap-3 text-sm">
-        <button className="rounded border px-3 py-1 disabled:opacity-40" disabled={page === 0}
-                onClick={() => setPage((p) => p - 1)}>Previous</button>
+      {cases.data && (
+        <Card flush>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-line text-left text-ink-600">
+                  <th className="px-5 py-3 font-medium">Case</th>
+                  <th className="px-5 py-3 font-medium">Alert</th>
+                  <th className="px-5 py-3 font-medium">Status</th>
+                  <th className="px-5 py-3 font-medium">Score</th>
+                  <th className="px-5 py-3" />
+                </tr>
+              </thead>
+              <tbody>
+                {cases.data.items.map((c) => (
+                  <tr key={c.id} className="border-b border-line last:border-0 hover:bg-page/60">
+                    <td className="px-5 py-3 font-semibold text-ink-900">Case {c.id}</td>
+                    <td className="px-5 py-3 text-ink-600">Alert {c.alert_id}</td>
+                    <td className="px-5 py-3"><StatusBadge status={c.status} /></td>
+                    <td className="px-5 py-3 font-semibold text-ink-900">{c.risk_score.toFixed(2)}</td>
+                    <td className="px-5 py-3 text-right">
+                      <Link to={`/cases/${c.id}`} className="font-medium text-brand-600 hover:underline">Open</Link>
+                    </td>
+                  </tr>
+                ))}
+                {cases.data.items.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="px-5 py-10 text-center text-ink-400">No cases match this filter.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
+
+      <nav className="flex items-center justify-end gap-3 text-sm text-ink-600">
+        <button className={buttonClass("secondary")} disabled={page === 0} onClick={() => setPage((p) => p - 1)}>
+          Previous
+        </button>
         <span>Page {page + 1} of {totalPages}</span>
-        <button className="rounded border px-3 py-1 disabled:opacity-40" disabled={page + 1 >= totalPages}
-                onClick={() => setPage((p) => p + 1)}>Next</button>
+        <button className={buttonClass("secondary")} disabled={page + 1 >= totalPages} onClick={() => setPage((p) => p + 1)}>
+          Next
+        </button>
       </nav>
-    </section>
+    </div>
   );
 }

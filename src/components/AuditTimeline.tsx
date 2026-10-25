@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import { api } from "../api/client";
+import { Card, EmptyState } from "./ui";
 
 const EventSchema = z.object({ node: z.string(), kind: z.string(), payload: z.record(z.any()), created_at: z.string() });
 
@@ -14,14 +15,36 @@ export default function AuditTimeline({ caseId, polling }: Props) {
     refetchInterval: polling ? 2000 : false,
   });
 
+  const events = eventsQ.data ?? [];
+
   return (
-    <section>
-      <h2 className="mb-2 font-medium">Audit timeline</h2>
-      <ol className="space-y-1 text-sm">
-        {eventsQ.data?.map((e, i) => (
-          <li key={i} className="font-mono">{e.created_at} {e.node} {e.kind}</li>
-        ))}
-      </ol>
-    </section>
+    <Card title="Audit timeline">
+      {events.length === 0 ? (
+        <EmptyState text="No events yet." />
+      ) : (
+        <ol className="relative space-y-4 border-l-2 border-line pl-5 text-sm">
+          {events.map((e, i) => {
+            const isError = e.kind === "error" || e.node.endsWith("error");
+            const message = typeof e.payload.error === "string" ? e.payload.error : null;
+            return (
+              <li key={i} className="relative">
+                <span
+                  className={`absolute -left-[1.7rem] top-1 h-3 w-3 rounded-full ring-4 ring-white ${
+                    isError ? "bg-brand-600" : "bg-ink-400"
+                  }`}
+                />
+                <div className="text-xs text-ink-400">{e.created_at.replace("T", " ").slice(0, 19)}</div>
+                <div className={`font-medium ${isError ? "text-brand-600" : "text-ink-900"}`}>
+                  {e.node} · {e.kind}
+                </div>
+                {isError && message && (
+                  <div className="mt-1 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-600">{message}</div>
+                )}
+              </li>
+            );
+          })}
+        </ol>
+      )}
+    </Card>
   );
 }

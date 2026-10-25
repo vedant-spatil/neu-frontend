@@ -12,11 +12,13 @@ export default function GraphView({ elements }: { elements: ElementDefinition[] 
       container: ref.current,
       elements,
       style: [
-        { selector: "node", style: { label: "data(label)", "font-size": 9, "background-color": "#64748b" } },
-        { selector: "node[?focus]", style: { "background-color": "#dc2626" } },
-        { selector: "edge", style: { label: "data(label)", "font-size": 8, width: 1.5, "line-color": "#94a3b8",
-                                     "target-arrow-shape": "triangle", "target-arrow-color": "#94a3b8", "curve-style": "bezier" } },
-        { selector: "edge[?laundering]", style: { "line-color": "#f59e0b", "target-arrow-color": "#f59e0b" } },
+        { selector: "node", style: { label: "data(label)", "font-size": 9, color: "#5b6168",
+                                     "background-color": "#9aa0a8", "text-wrap": "ellipsis", "text-max-width": "80px" } },
+        { selector: "node[?focus]", style: { "background-color": "#b71c22", width: 34, height: 34 } },
+        { selector: "edge", style: { label: "data(label)", "font-size": 8, color: "#5b6168", width: 1.5,
+                                     "line-color": "#c9ccd1", "target-arrow-shape": "triangle",
+                                     "target-arrow-color": "#c9ccd1", "curve-style": "bezier" } },
+        { selector: "edge[?laundering]", style: { "line-color": "#b7770d", "target-arrow-color": "#b7770d" } },
       ],
       layout: { name: "cose", animate: false },
     });
@@ -27,5 +29,5 @@ export default function GraphView({ elements }: { elements: ElementDefinition[] 
     };
   }, [elements]);
 
-  return <div ref={ref} className="h-96 w-full rounded border bg-white" />;
+  return <div ref={ref} className="h-[28rem] w-full rounded-2xl bg-white ring-1 ring-line" />;
 }

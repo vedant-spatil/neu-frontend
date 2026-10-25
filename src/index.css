@@ -1,1 +1,32 @@
 @import "tailwindcss";
+
+/* Colour tokens. Use them as utilities (bg-brand-600, text-ink-600, bg-ok-50, ...). */
+@theme {
+  --color-brand-50: #fcf1f1;
+  --color-brand-100: #f8dcdc;
+  --color-brand-500: #b71c22;
+  --color-brand-600: #9a1419;
+  --color-brand-700: #7d0f14;
+
+  --color-ok-50: #e8f7f0;
+  --color-ok-600: #1b8a5f;
+
+  --color-warn-50: #fdf4e1;
+  --color-warn-600: #b7770d;
+
+  --color-info-50: #e9f1fc;
+  --color-info-600: #2f6fbd;
+
+  --color-ink-900: #1d2024;
+  --color-ink-600: #5b6168;
+  --color-ink-400: #9aa0a8;
+  --color-line: #e7e8ea;
+  --color-page: #f6f6f7;
+}
+
+@layer base {
+  body {
+    background-color: var(--color-page);
+    color: var(--color-ink-900);
+  }
+}

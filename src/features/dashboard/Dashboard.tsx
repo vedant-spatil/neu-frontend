@@ -2,6 +2,9 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { z } from "zod";
 import { api } from "../../api/client";
+import { TrendsSchema } from "../../api/schemas";
+import { Columns, Donut, HorizontalBars, PairedBars, TrendLine } from "../../components/charts";
+import { buttonClass, Card, EmptyState, ErrorState, PageHeader, StatCard } from "../../components/ui";
 
 const DashboardSchema = z.object({
   cases_by_status: z.record(z.number()),
@@ -12,88 +15,121 @@ const DashboardSchema = z.object({
   failed_cases: z.number(),
 });
 
-function Card({ title, value }: { title: string; value: number | string }) {
-  return (
-    <div className="rounded bg-white p-4 shadow">
-      <div className="text-xs uppercase text-slate-500">{title}</div>
-      <div className="mt-1 text-2xl font-semibold">{value}</div>
-    </div>
-  );
-}
-
-function Bars({ data, empty }: { data: Record<string, number>; empty: string }) {
-  const entries = Object.entries(data).sort(([a], [b]) => a.localeCompare(b));
-  const max = Math.max(1, ...entries.map(([, v]) => v));
-  if (entries.length === 0) return <p className="text-sm text-slate-500">{empty}</p>;
-  return (
-    <ul className="space-y-2 text-sm">
-      {entries.map(([k, v]) => (
-        <li key={k} className="flex items-center gap-2">
-          <span className="w-44 truncate font-mono">{k}</span>
-          <div className="h-3 flex-1 rounded bg-slate-100">
-            <div className="h-3 rounded bg-slate-700" style={{ width: `${(v / max) * 100}%` }} />
-          </div>
-          <span className="w-12 text-right">{v}</span>
-        </li>
-      ))}
-    </ul>
-  );
-}
+const shortDay = (iso: string) => iso.slice(5); // "2022-09-01" -> "09-01"
 
 export default function Dashboard() {
-  const q = useQuery({
+  const dash = useQuery({
     queryKey: ["dashboard"],
     queryFn: async () => DashboardSchema.parse(await api<unknown>("/api/dashboard")),
     refetchInterval: 30_000,
   });
+  const trends = useQuery({
+    queryKey: ["dashboard-trends"],
+    queryFn: async () => TrendsSchema.parse(await api<unknown>("/api/dashboard/trends?days=30")),
+    refetchInterval: 30_000,
+  });
 
-  if (q.isLoading) return <p>Loading dashboard...</p>;
-  if (q.isError || !q.data) return <p role="alert">Could not load dashboard.</p>;
-  const d = q.data;
+  if (dash.isLoading) return <p className="text-ink-600">Loading dashboard...</p>;
+  if (dash.isError || !dash.data) return <ErrorState text="Could not load the dashboard." />;
+  const d = dash.data;
   const openCases = d.cases_by_status["open"] ?? 0;
   const awaiting = d.cases_by_status["awaiting_review"] ?? 0;
-  const decisions = Object.values(d.decisions_by_action).reduce((a, b) => a + b, 0);
+  const approved = d.decisions_by_action["approve"] ?? 0;
+  const closed = d.decisions_by_action["close"] ?? 0;
+  const decisions = approved + closed;
+
+  const activity = trends.data?.activity_by_day ?? [];
+  const opened30 = activity.reduce((sum, r) => sum + r.cases_opened, 0);
+  const decided30 = activity.reduce((sum, r) => sum + r.approved + r.closed, 0);
+
+  const ruleRows = Object.entries(d.alerts_above_threshold_by_rule)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([name, value]) => ({ name, value }));
+  const scoreRows = Object.entries(d.score_histogram)
+    .sort(([a], [b]) => Number(a) - Number(b))
+    .map(([name, value]) => ({ name, value }));
+  const alertTrend = (trends.data?.alerts_by_day ?? []).map((r) => ({ label: shortDay(r.day), value: r.alerts }));
+  const activityRows = activity.slice(-14).map((r) => ({
+    label: shortDay(r.day),
+    a: r.cases_opened,
+    b: r.approved,
+  }));
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold">Dashboard</h1>
-        <Link to="/alerts" className="rounded bg-slate-900 px-3 py-1 text-sm text-white">Alert queue</Link>
+      <PageHeader
+        title="Dashboard"
+        subtitle="Refreshes every 30 seconds"
+        actions={<Link to="/alerts" className={buttonClass()}>Alert queue</Link>}
+      />
+
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard
+          label="Open cases"
+          value={openCases}
+          trend={{ text: `${opened30} opened in 30 days`, tone: "neutral" }}
+        />
+        <StatCard
+          label="Awaiting review"
+          value={awaiting}
+          trend={{ text: awaiting > 0 ? "needs a decision" : "queue clear", tone: awaiting > 0 ? "down" : "up" }}
+        />
+        <StatCard
+          label="Failed cases"
+          value={d.failed_cases}
+          trend={{ text: d.failed_cases > 0 ? "check the audit log" : "no failures", tone: d.failed_cases > 0 ? "down" : "up" }}
+        />
+        <StatCard
+          label="Decisions"
+          value={decisions}
+          trend={{ text: `${decided30} in 30 days`, tone: "neutral" }}
+        />
       </div>
 
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <Card title="Open cases" value={openCases} />
-        <Card title="Awaiting review" value={awaiting} />
-        <Card title="Failed cases" value={d.failed_cases} />
-        <Card title="Decisions" value={decisions} />
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-2">
-        <section className="rounded bg-white p-4 shadow">
-          <h2 className="mb-3 font-medium">Alerts above threshold by rule</h2>
-          <Bars data={d.alerts_above_threshold_by_rule} empty="No alerts above threshold." />
-        </section>
-        <section className="rounded bg-white p-4 shadow">
-          <h2 className="mb-3 font-medium">Score distribution</h2>
-          <Bars data={d.score_histogram} empty="No alerts yet." />
-        </section>
-        <section className="rounded bg-white p-4 shadow">
-          <h2 className="mb-3 font-medium">Top accounts by alerts</h2>
-          <table className="w-full text-sm">
-            <tbody>
-              {d.top_accounts_by_alerts.map((a) => (
-                <tr key={a.account_id} className="border-t">
-                  <td className="py-1 font-mono">{a.account_id}</td>
-                  <td className="py-1 text-right">{a.alerts}</td>
+      <div className="grid gap-6 xl:grid-cols-3">
+        <Card title="Alerts above threshold by rule" className="xl:col-span-1">
+          <HorizontalBars rows={ruleRows} empty="No alerts above threshold." />
+        </Card>
+        <Card title="Alerts per day" className="xl:col-span-2">
+          <TrendLine rows={alertTrend} label="Alerts" empty="No alert history yet." />
+        </Card>
+        <Card title="Score distribution" className="xl:col-span-1">
+          <Columns rows={scoreRows} empty="No alerts yet." />
+        </Card>
+        <Card title="Cases opened and approvals, last 14 days" className="xl:col-span-2">
+          <PairedBars rows={activityRows} seriesA="Cases opened" seriesB="Approved" empty="No case activity yet." />
+        </Card>
+        <Card title="Decisions" className="xl:col-span-1">
+          <Donut
+            rows={[
+              { name: "Approved", value: approved },
+              { name: "Closed", value: closed },
+            ]}
+            empty="No decisions yet."
+          />
+        </Card>
+        <Card title="Top accounts by alerts" className="xl:col-span-2">
+          {d.top_accounts_by_alerts.length === 0 ? (
+            <EmptyState text="No accounts with alerts yet." />
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-line text-left text-ink-600">
+                  <th className="py-2 font-medium">Account</th>
+                  <th className="py-2 text-right font-medium">Alerts</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
-        <section className="rounded bg-white p-4 shadow">
-          <h2 className="mb-3 font-medium">Decisions by action</h2>
-          <Bars data={d.decisions_by_action} empty="No decisions yet." />
-        </section>
+              </thead>
+              <tbody>
+                {d.top_accounts_by_alerts.map((a) => (
+                  <tr key={a.account_id} className="border-b border-line last:border-0">
+                    <td className="py-2 font-mono text-ink-900">{a.account_id}</td>
+                    <td className="py-2 text-right font-semibold text-ink-900">{a.alerts}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </Card>
       </div>
     </div>
   );

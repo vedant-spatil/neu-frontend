@@ -28,6 +28,14 @@ export const GraphSchema = z.object({
 export const UserSchema = z.object({ id: z.number(), email: z.string(), role: z.string() });
 export const TokenSchema = z.object({ access_token: z.string(), token_type: z.string() });
 
+export const TrendsSchema = z.object({
+  alerts_by_day: z.array(z.object({ day: z.string(), alerts: z.number() })),
+  activity_by_day: z.array(
+    z.object({ day: z.string(), cases_opened: z.number(), approved: z.number(), closed: z.number() }),
+  ),
+});
+export type Trends = z.infer<typeof TrendsSchema>;
+
 // Admin and QA (projects, QA evaluations, admin review). Mirrors app/api/routers/projects.py and users.py.
 export const RoleSchema = z.enum(["admin", "qa"]);
 export type Role = z.infer<typeof RoleSchema>;

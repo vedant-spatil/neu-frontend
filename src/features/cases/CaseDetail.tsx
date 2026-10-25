@@ -1,10 +1,11 @@
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import { api } from "../../api/client";
 import { CaseSchema, GraphSchema } from "../../api/schemas";
 import AuditTimeline from "../../components/AuditTimeline";
 import GraphView from "../../components/GraphView";
+import { Card, ErrorState, StatusBadge } from "../../components/ui";
 import DecisionForm from "../approvals/DecisionForm";
 
 const SarSchema = z.object({ version: z.number(), body: z.record(z.any()) });
@@ -29,8 +30,8 @@ export default function CaseDetail() {
     retry: false,
   });
 
-  if (caseQ.isLoading) return <p>Loading case...</p>;
-  if (!caseQ.data) return <p role="alert">Case not found.</p>;
+  if (caseQ.isLoading) return <p className="text-ink-600">Loading case...</p>;
+  if (!caseQ.data) return <ErrorState text="Case not found." />;
 
   const elements = graphQ.data
     ? [...graphQ.data.elements.nodes, ...graphQ.data.elements.edges]
@@ -38,26 +39,37 @@ export default function CaseDetail() {
 
   return (
     <div className="space-y-6">
-      <header className="flex items-baseline justify-between">
-        <h1 className="text-lg font-semibold">Case {caseQ.data.id}</h1>
-        <span className="rounded bg-slate-200 px-2 py-1 text-sm">{caseQ.data.status}</span>
-      </header>
+      <div>
+        <nav className="mb-2 text-sm text-ink-400">
+          <Link to="/cases" className="hover:text-ink-900">Cases</Link> / Case {caseQ.data.id}
+        </nav>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-2xl font-semibold text-ink-900">Case {caseQ.data.id}</h1>
+          <StatusBadge status={caseQ.data.status} />
+        </div>
+      </div>
 
-      <section>
-        <h2 className="mb-2 font-medium">Transaction graph</h2>
-        <GraphView elements={elements as never} />
-      </section>
+      <div className="grid gap-6 xl:grid-cols-3">
+        <Card title="Transaction graph" className="xl:col-span-2">
+          <GraphView elements={elements as never} />
+        </Card>
+        <AuditTimeline caseId={id} polling={caseQ.data.status === "open"} />
+      </div>
 
-      <AuditTimeline caseId={id} polling={caseQ.data.status === "open"} />
-
-      {sarQ.data && (
-        <section>
-          <h2 className="mb-2 font-medium">SAR draft (v{sarQ.data.version}, redacted)</h2>
-          <pre className="overflow-x-auto rounded bg-white p-3 text-xs">{JSON.stringify(sarQ.data.body, null, 2)}</pre>
-        </section>
-      )}
-
-      {caseQ.data.status === "awaiting_review" && <DecisionForm caseId={id} />}
+      <div className="grid gap-6 xl:grid-cols-2">
+        <Card title={sarQ.data ? `SAR draft (v${sarQ.data.version}, redacted)` : "SAR draft"}>
+          {sarQ.data ? (
+            <pre className="max-h-96 overflow-auto rounded-xl bg-page p-4 text-xs text-ink-900">
+              {JSON.stringify(sarQ.data.body, null, 2)}
+            </pre>
+          ) : (
+            <p className="text-sm text-ink-400">
+              No SAR draft. It appears once the report step finishes, or it failed (see the timeline).
+            </p>
+          )}
+        </Card>
+        {caseQ.data.status === "awaiting_review" && <DecisionForm caseId={id} />}
+      </div>
     </div>
   );
 }

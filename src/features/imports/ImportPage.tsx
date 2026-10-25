@@ -3,6 +3,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import { api, API_BASE } from "../../api/client";
 import { getToken } from "../../auth/session";
+import { buttonClass, Card, ErrorState, PageHeader, StatusBadge, Stepper } from "../../components/ui";
 
 const ImportSchema = z.object({
   id: z.number(),
@@ -95,30 +96,41 @@ export default function ImportPage() {
     | undefined;
   const errors = validation?.errors ?? {};
 
-  return (
-    <section className="space-y-4">
-      <h1 className="text-lg font-semibold">Import transactions (CSV)</h1>
-      <p className="text-sm text-slate-600">
-        Admin only. Upload a CSV, match its columns to the schema, then sync. The sync checks the file, loads it,
-        and opens cases for the highest-risk alerts.
-      </p>
+  // Step 0 upload, 1 map columns, 2 sync (once a sync has started).
+  const step = imp.data ? 2 : columns.data ? 1 : 0;
 
-      <div className="flex items-center gap-3">
-        <input type="file" accept=".csv" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-        <button disabled={!file || upload.isPending}
-                onClick={() => file && upload.mutate(file)}
-                className="rounded bg-slate-900 px-3 py-1 text-white disabled:opacity-50">Upload</button>
-      </div>
-      {upload.isError && <p role="alert" className="text-red-600">Upload failed.</p>}
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Import transactions"
+        subtitle="Admin only. Upload a CSV, match its columns to the schema, then sync. The sync checks the file, loads it and opens cases for the highest-risk alerts."
+      />
+
+      <Stepper steps={["Upload", "Map columns", "Sync"]} current={step} />
+
+      <Card title="1. Upload">
+        <div className="flex flex-wrap items-center gap-3 text-sm">
+          <input
+            type="file"
+            accept=".csv"
+            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            className="text-ink-600 file:mr-3 file:rounded-lg file:border-0 file:bg-page file:px-3 file:py-2 file:text-ink-900"
+          />
+          <button disabled={!file || upload.isPending} onClick={() => file && upload.mutate(file)} className={buttonClass()}>
+            Upload
+          </button>
+        </div>
+        {upload.isError && <div className="mt-3"><ErrorState text="Upload failed." /></div>}
+      </Card>
 
       {columns.data && (
-        <div className="rounded bg-white p-4 shadow text-sm space-y-3">
-          <div className="font-semibold">Map columns to the schema</div>
-          <table className="w-full text-left">
+        <Card title="2. Map columns">
+          <table className="w-full text-sm">
             <thead>
-              <tr className="border-b text-slate-500">
-                <th className="py-1">Schema field</th>
-                <th className="py-1">CSV column</th>
+              <tr className="border-b border-line text-left text-ink-600">
+                <th className="py-2 font-medium">Field</th>
+                <th className="py-2 font-medium">Requirement</th>
+                <th className="py-2 font-medium">CSV column</th>
               </tr>
             </thead>
             <tbody>
@@ -126,21 +138,29 @@ export default function ImportPage() {
                 const auto = columns.data.auto_mapping[f.field];
                 const chosen = mapping[f.field] ?? "";
                 return (
-                  <tr key={f.field} className="border-b last:border-0">
-                    <td className="py-1">
-                      {f.field}{" "}
-                      {f.required
-                        ? <span className="text-xs text-red-600">required</span>
-                        : <span className="text-xs text-slate-400">optional</span>}
+                  <tr key={f.field} className="border-b border-line last:border-0">
+                    <td className="py-2 font-mono text-ink-900">{f.field}</td>
+                    <td className="py-2">
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                        f.required ? "bg-brand-50 text-brand-600" : "bg-line text-ink-600"
+                      }`}>
+                        {f.required ? "Required" : "Optional"}
+                      </span>
                     </td>
-                    <td className="py-1">
-                      <select value={chosen} onChange={(e) => setField(f.field, e.target.value)}
-                              disabled={busy} className="w-full rounded border px-2 py-1">
+                    <td className="py-2">
+                      <select
+                        value={chosen}
+                        onChange={(e) => setField(f.field, e.target.value)}
+                        disabled={busy}
+                        className="w-full rounded-lg bg-white px-3 py-2 text-ink-900 ring-1 ring-line disabled:opacity-60"
+                      >
                         <option value="">— not mapped —</option>
                         {columns.data.columns.map((c) => <option key={c} value={c}>{c}</option>)}
                       </select>
                       {auto !== undefined && chosen === auto && (
-                        <span className="text-xs text-slate-400">matched automatically</span>
+                        <span className="mt-1 inline-block rounded-full bg-ok-50 px-2 py-0.5 text-xs text-ok-600">
+                          Matched automatically
+                        </span>
                       )}
                     </td>
                   </tr>
@@ -148,44 +168,74 @@ export default function ImportPage() {
               })}
             </tbody>
           </table>
-          {missing.length > 0 && (
-            <div className="text-amber-700">Map these required fields first: {missing.join(", ")}</div>
+
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+            {missing.length > 0 ? (
+              <div className="rounded-lg bg-warn-50 px-3 py-2 text-sm text-warn-600">
+                Map these required fields first: {missing.join(", ")}
+              </div>
+            ) : (
+              <div className="rounded-lg bg-ok-50 px-3 py-2 text-sm text-ok-600">All required fields are mapped.</div>
+            )}
+            <button disabled={!canSync} onClick={() => importId !== null && sync.mutate(importId)} className={buttonClass()}>
+              Sync data
+            </button>
+          </div>
+          {sync.isError && (
+            <div className="mt-3"><ErrorState text={`Sync could not start: ${(sync.error as Error).message}`} /></div>
           )}
-          <button disabled={!canSync} onClick={() => importId !== null && sync.mutate(importId)}
-                  className="rounded bg-slate-900 px-3 py-1 text-white disabled:opacity-50">Sync data</button>
-          {sync.isError && <p role="alert" className="text-red-600">Sync could not start: {(sync.error as Error).message}</p>}
-        </div>
+        </Card>
       )}
 
       {imp.data && (
-        <div className="rounded bg-white p-4 shadow text-sm space-y-2">
-          <div><b>File</b> {imp.data.filename} · {(imp.data.size_bytes / 1e6).toFixed(1)} MB · <b>status</b> {imp.data.status}</div>
+        <Card
+          title="3. Sync progress"
+          action={<StatusBadge status={imp.data.status} />}
+        >
+          <div className="grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
+            <Stat label="File" value={imp.data.filename} />
+            <Stat label="Size" value={`${(imp.data.size_bytes / 1e6).toFixed(1)} MB`} />
+            <Stat label="Stage" value={typeof report.stage === "string" ? report.stage : "—"} />
+            <Stat label="Elapsed" value={typeof report.elapsed_s === "number" ? `${report.elapsed_s} s` : "—"} />
+            <Stat label="Rows loaded" value={typeof report.rows === "number" ? report.rows.toLocaleString() : "—"} />
+            <Stat label="Cases opened" value={typeof report.cases_opened === "number" ? report.cases_opened : "—"} />
+            <Stat label="Peak memory (API)" value={typeof report.process_peak_rss_mb === "number" ? `${report.process_peak_rss_mb} MB` : "—"} />
+            <Stat label="Rows checked" value={validation?.rows !== undefined ? validation.rows.toLocaleString() : "—"} />
+          </div>
+
           {busy && (
-            <div className="flex items-center gap-3">
-              <button disabled={reset.isPending} onClick={() => importId !== null && reset.mutate(importId)}
-                      className="rounded border px-3 py-1 disabled:opacity-50">Reset stuck import</button>
-              {reset.isError && <span role="alert" className="text-red-600">{(reset.error as Error).message}</span>}
+            <div className="mt-5 flex items-center gap-3">
+              <button disabled={reset.isPending} onClick={() => importId !== null && reset.mutate(importId)} className={buttonClass("secondary")}>
+                Reset stuck import
+              </button>
+              {reset.isError && <span className="text-sm text-brand-600">{(reset.error as Error).message}</span>}
             </div>
           )}
-          {typeof report.stage === "string" && <div>Stage: {report.stage}</div>}
-          {typeof report.elapsed_s === "number" && <div>Elapsed: {report.elapsed_s} s</div>}
-          {typeof report.process_peak_rss_mb === "number" && (
-            <div>Peak memory (API process): {report.process_peak_rss_mb} MB</div>
-          )}
-          {validation?.rows !== undefined && <div>Rows checked: {validation.rows}</div>}
+
           {Object.keys(errors).length > 0 && (
-            <ul className="text-red-600">
-              {Object.entries(errors).map(([k, v]) => <li key={k}>{k}: {v}</li>)}
-            </ul>
+            <div className="mt-5">
+              <ErrorState text={`Validation problems: ${Object.entries(errors).map(([k, v]) => `${k} (${v})`).join(", ")}`} />
+            </div>
           )}
           {(validation?.non_usd_rows ?? 0) > 0 && (
-            <div className="text-amber-700">Non-USD rows (ignored by alert rules): {validation?.non_usd_rows}</div>
+            <div className="mt-3 rounded-xl bg-warn-50 px-4 py-3 text-sm text-warn-600">
+              Non-USD rows (ignored by alert rules): {validation?.non_usd_rows}
+            </div>
           )}
-          {typeof report.rows === "number" && <div>Rows loaded: {report.rows}</div>}
-          {typeof report.cases_opened === "number" && <div>Cases opened: {report.cases_opened}</div>}
-          {typeof report.error === "string" && <div className="text-red-600">Error: {report.error}</div>}
-        </div>
+          {typeof report.error === "string" && (
+            <div className="mt-3"><ErrorState text={`Error: ${report.error}`} /></div>
+          )}
+        </Card>
       )}
-    </section>
+    </div>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div>
+      <div className="text-xs uppercase tracking-wide text-ink-400">{label}</div>
+      <div className="mt-1 break-all font-medium text-ink-900">{value}</div>
+    </div>
   );
 }

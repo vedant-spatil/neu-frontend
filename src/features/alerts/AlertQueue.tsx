@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { api } from "../../api/client";
 import { AlertSchema, CaseSchema } from "../../api/schemas";
+import { buttonClass, Card, ErrorState, PageHeader, RuleBadge } from "../../components/ui";
 
 const PageSchema = z.object({
   total: z.number(),
@@ -13,20 +14,41 @@ const PageSchema = z.object({
 });
 
 const PAGE_SIZE = 25;
+const SORTS: [string, string][] = [
+  ["score_desc", "Score, highest first"],
+  ["score_asc", "Score, lowest first"],
+  ["ts_desc", "Newest first"],
+  ["ts_asc", "Oldest first"],
+  ["amount_desc", "Amount, largest first"],
+];
+
+const RULES: [string, string][] = [
+  ["R1_structuring", "Structuring"],
+  ["R2_fan_out", "Fan-out"],
+  ["R3_fan_in", "Fan-in"],
+  ["R4_pass_through", "Pass-through"],
+  ["R5_cycle", "Cycle"],
+  ["R6_scatter_gather", "Scatter-gather"],
+  ["R7_gather_scatter", "Gather-scatter"],
+];
 
 export default function AlertQueue() {
   const navigate = useNavigate();
   const [page, setPage] = useState(0);
   const [rule, setRule] = useState("");
+  const [account, setAccount] = useState("");
+  const [sort, setSort] = useState("score_desc");
 
   const query = new URLSearchParams({
     offset: String(page * PAGE_SIZE),
     limit: String(PAGE_SIZE),
+    sort,
     ...(rule ? { rule } : {}),
+    ...(account.trim() ? { account: account.trim() } : {}),
   }).toString();
 
   const alerts = useQuery({
-    queryKey: ["alerts", page, rule],
+    queryKey: ["alerts", page, rule, account.trim(), sort],
     queryFn: async () => PageSchema.parse(await api<unknown>(`/api/alerts?${query}`)),
     placeholderData: keepPreviousData,
   });
@@ -39,60 +61,101 @@ export default function AlertQueue() {
 
   const totalPages = alerts.data ? Math.max(1, Math.ceil(alerts.data.total / PAGE_SIZE)) : 1;
 
-  if (alerts.isLoading) return <p>Loading alerts...</p>;
-  if (alerts.isError) return <p role="alert">Could not load alerts.</p>;
-
   return (
-    <section className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-lg font-semibold">Alert queue ({alerts.data?.total ?? 0})</h1>
-        <label className="text-sm">
-          Rule{" "}
-          <select className="rounded border px-2 py-1" value={rule}
-                  onChange={(e) => { setRule(e.target.value); setPage(0); }}>
-            <option value="">All</option>
-            <option value="R1_structuring">Structuring</option>
-            <option value="R2_fan_out">Fan-out</option>
-            <option value="R3_fan_in">Fan-in</option>
-            <option value="R4_pass_through">Pass-through</option>
-            <option value="R5_cycle">Cycle</option>
-            <option value="R6_scatter_gather">Scatter-gather</option>
-            <option value="R7_gather_scatter">Gather-scatter</option>
-          </select>
-        </label>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title={`Alert queue (${alerts.data?.total.toLocaleString() ?? 0})`}
+        subtitle="Highest risk first. Open a case to review the transactions."
+        actions={
+          <div className="flex flex-wrap items-center gap-3">
+            <input
+              type="search"
+              placeholder="Search account ID…"
+              value={account}
+              onChange={(e) => { setAccount(e.target.value); setPage(0); }}
+              className="w-56 rounded-lg bg-white px-3 py-2 font-mono text-sm text-ink-900 ring-1 ring-line outline-none focus:ring-2 focus:ring-brand-500"
+            />
+            <label className="flex items-center gap-2 text-sm text-ink-600">
+              Rule
+              <select
+                className="rounded-lg bg-white px-3 py-2 text-ink-900 ring-1 ring-line"
+                value={rule}
+                onChange={(e) => { setRule(e.target.value); setPage(0); }}
+              >
+                <option value="">All</option>
+                {RULES.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
+              </select>
+            </label>
+            <label className="flex items-center gap-2 text-sm text-ink-600">
+              Sort by
+              <select
+                className="rounded-lg bg-white px-3 py-2 text-ink-900 ring-1 ring-line"
+                value={sort}
+                onChange={(e) => { setSort(e.target.value); setPage(0); }}
+              >
+                {SORTS.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
+              </select>
+            </label>
+          </div>
+        }
+      />
 
-      <table className="w-full bg-white text-sm shadow">
-        <thead className="bg-slate-100 text-left">
-          <tr>
-            <th className="p-2">Account</th><th className="p-2">Peak amount</th><th className="p-2">First seen</th>
-            <th className="p-2">Rules</th><th className="p-2">Score</th><th className="p-2"></th>
-          </tr>
-        </thead>
-        <tbody>
-          {alerts.data?.items.map((a) => (
-            <tr key={a.id} className="border-t">
-              <td className="p-2 font-mono">{a.account_id}</td>
-              <td className="p-2">{a.amount.toFixed(2)}</td>
-              <td className="p-2">{a.ts}</td>
-              <td className="p-2">{a.rules.join(", ")}</td>
-              <td className="p-2">{a.risk_score.toFixed(2)}</td>
-              <td className="p-2">
-                <button onClick={() => open.mutate(a.id)} disabled={open.isPending}
-                        className="rounded bg-slate-900 px-2 py-1 text-white disabled:opacity-50">Open case</button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {alerts.isError && <ErrorState text="Could not load alerts." />}
+      {alerts.isLoading && <p className="text-ink-600">Loading alerts...</p>}
 
-      <nav className="flex items-center justify-end gap-3 text-sm">
-        <button className="rounded border px-3 py-1 disabled:opacity-40" disabled={page === 0}
-                onClick={() => setPage((p) => p - 1)}>Previous</button>
+      {alerts.data && (
+        <Card flush>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-line text-left text-ink-600">
+                  <th className="px-5 py-3 font-medium">Account</th>
+                  <th className="px-5 py-3 font-medium">Peak amount</th>
+                  <th className="px-5 py-3 font-medium">First seen</th>
+                  <th className="px-5 py-3 font-medium">Rules</th>
+                  <th className="px-5 py-3 font-medium">Score</th>
+                  <th className="px-5 py-3" />
+                </tr>
+              </thead>
+              <tbody>
+                {alerts.data.items.map((a) => (
+                  <tr key={a.id} className="border-b border-line last:border-0 hover:bg-page/60">
+                    <td className="px-5 py-3 font-mono text-ink-900">{a.account_id}</td>
+                    <td className="px-5 py-3 text-ink-900">{a.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                    <td className="px-5 py-3 text-ink-600">{a.ts.replace("T", " ").slice(0, 16)}</td>
+                    <td className="px-5 py-3">{a.rules.map((r) => <RuleBadge key={r} rule={r} />)}</td>
+                    <td className="px-5 py-3 font-semibold text-ink-900">{a.risk_score.toFixed(2)}</td>
+                    <td className="px-5 py-3 text-right">
+                      <button
+                        onClick={() => open.mutate(a.id)}
+                        disabled={open.isPending}
+                        className={buttonClass()}
+                      >
+                        Open case
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {alerts.data.items.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="px-5 py-10 text-center text-ink-400">No alerts match this filter.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
+
+      <nav className="flex items-center justify-end gap-3 text-sm text-ink-600">
+        <button className={buttonClass("secondary")} disabled={page === 0} onClick={() => setPage((p) => p - 1)}>
+          Previous
+        </button>
         <span>Page {page + 1} of {totalPages}</span>
-        <button className="rounded border px-3 py-1 disabled:opacity-40" disabled={page + 1 >= totalPages}
-                onClick={() => setPage((p) => p + 1)}>Next</button>
+        <button className={buttonClass("secondary")} disabled={page + 1 >= totalPages} onClick={() => setPage((p) => p + 1)}>
+          Next
+        </button>
       </nav>
-    </section>
+    </div>
   );
 }

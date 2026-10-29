@@ -41,7 +41,12 @@ export type Trends = z.infer<typeof TrendsSchema>;
 export const RoleSchema = z.enum(["admin", "qa"]);
 export type Role = z.infer<typeof RoleSchema>;
 
-export const ProjectSummarySchema = z.object({ id: z.number(), name: z.string() });
+export const ProjectSummarySchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  members: z.number().optional(),
+  accounts: z.number().optional(),
+});
 export type ProjectSummary = z.infer<typeof ProjectSummarySchema>;
 
 export const ProjectDetailSchema = z.object({

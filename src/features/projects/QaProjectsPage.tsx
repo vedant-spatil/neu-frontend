@@ -1,14 +1,14 @@
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import { api } from "../../api/client";
 import { ProjectSummarySchema } from "../../api/schemas";
-import { Card, EmptyState, ErrorState, PageHeader } from "../../components/ui";
+import { EmptyState, ErrorState, PageHeader } from "../../components/ui";
+import { ProjectCard } from "./ProjectCard";
 
 const ProjectListSchema = z.array(ProjectSummarySchema);
 
 export default function QaProjectsPage() {
-  const navigate = useNavigate();
   const projects = useQuery({
     queryKey: ["projects"],
     queryFn: async () => ProjectListSchema.parse(await api<unknown>("/api/projects")),
@@ -16,29 +16,20 @@ export default function QaProjectsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="My projects" subtitle="Projects you are a QA member of." />
+      <PageHeader title="My projects" />
 
       {projects.isError && <ErrorState text="Could not load projects." />}
+      {projects.data && projects.data.length === 0 && <EmptyState text="You are not a member of any project yet." />}
 
-      <Card title="Projects" flush>
-        {projects.data && projects.data.length === 0 && (
-          <EmptyState text="You are not a member of any project yet." />
-        )}
-        {projects.data && projects.data.length > 0 && (
-          <ul className="divide-y divide-line">
-            {projects.data.map((p) => (
-              <li
-                key={p.id}
-                onClick={() => navigate(`/qa/projects/${p.id}`)}
-                className="flex cursor-pointer items-center justify-between px-5 py-3 text-sm hover:bg-page/60"
-              >
-                <span className="font-medium text-ink-900">{p.name}</span>
-                <span className="font-medium text-brand-600">Review accounts</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Card>
+      {projects.data && projects.data.length > 0 && (
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {projects.data.map((p) => (
+            <Link key={p.id} to={`/qa/projects/${p.id}`} className="block">
+              <ProjectCard name={p.name} members={p.members ?? 0} accounts={p.accounts ?? 0} />
+            </Link>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

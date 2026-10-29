@@ -86,18 +86,6 @@ export default function CaseDetail() {
               </span>
             )}
           </div>
-          {status === "failed" && (
-            <button
-              type="button"
-              disabled={rerun.isPending}
-              onClick={() => {
-                if (window.confirm("Rerun the investigation for this case? The earlier events are kept.")) rerun.mutate();
-              }}
-              className={buttonClass()}
-            >
-              Rerun investigation
-            </button>
-          )}
         </div>
         {rerun.isError && <div className="mt-3"><ErrorState text="The rerun could not start." /></div>}
         {assign.isError && <div className="mt-3"><ErrorState text="The case could not be assigned." /></div>}
@@ -133,7 +121,12 @@ export default function CaseDetail() {
         <Card id="transaction-graph" title="Transaction graph" className="xl:col-span-2">
           <GraphView elements={elements as never} />
         </Card>
-        <AuditTimeline caseId={id} polling={status === "open"} />
+        <AuditTimeline
+          caseId={id}
+          polling={status === "open"}
+          onRerun={status === "failed" ? () => rerun.mutate() : undefined}
+          rerunning={rerun.isPending}
+        />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">

@@ -91,7 +91,7 @@ export default function QaProjectDetailPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title={project.data.name} subtitle="Pick an account, choose tags, and submit for admin review." />
+      <PageHeader title={project.data.name} />
 
       {accounts.isError && <ErrorState text="Could not load accounts." />}
 

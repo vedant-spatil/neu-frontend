@@ -22,6 +22,8 @@
   --color-ink-400: #9aa0a8;
   --color-line: #e7e8ea;
   --color-page: #f6f6f7;
+
+  --font-wordmark: "Poppins", "Segoe UI", sans-serif;
 }
 
 @layer base {

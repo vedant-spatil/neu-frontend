@@ -108,7 +108,6 @@ export default function CasesList() {
     <div className="space-y-6">
       <PageHeader
         title={`Cases (${cases.data?.total ?? 0})`}
-        subtitle="Every case opened from an alert, with its current status."
         actions={
           <label className="flex items-center gap-2 text-sm text-ink-600">
             Status

@@ -6,6 +6,7 @@ import { TrendsSchema } from "../../api/schemas";
 import { useMe } from "../../auth/useAuth";
 import { Columns, Donut, HorizontalBars, PairedBars, TrendLine } from "../../components/charts";
 import { buttonClass, Card, EmptyState, ErrorState, PageHeader, StatCard } from "../../components/ui";
+import { ruleLabel } from "../../lib/labels";
 
 const DashboardSchema = z.object({
   cases_by_status: z.record(z.number()),
@@ -46,7 +47,7 @@ export default function Dashboard() {
 
   const ruleRows = Object.entries(d.alerts_above_threshold_by_rule)
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([name, value]) => ({ name, value }));
+    .map(([name, value]) => ({ name: ruleLabel(name), value }));
   const scoreRows = Object.entries(d.score_histogram)
     .sort(([a], [b]) => Number(a) - Number(b))
     .map(([name, value]) => ({ name, value }));
@@ -61,8 +62,7 @@ export default function Dashboard() {
     <div className="space-y-6">
       <PageHeader
         title="Dashboard"
-        subtitle={isAdmin ? "Live. Totals across all cases." : "Live. Your assigned cases only."}
-        actions={<Link to="/alerts" className={buttonClass()}>Alert queue</Link>}
+        actions={isAdmin && <Link to="/alerts" className={buttonClass()}>Alert queue</Link>}
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -88,9 +88,17 @@ export default function Dashboard() {
         />
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-3">
+      <div className="grid gap-6 xl:grid-cols-2">
+        <Card title="Cases opened and approvals, last 14 days">
+          <PairedBars rows={activityRows} seriesA="Cases opened" seriesB="Approved" empty="No case activity yet." />
+        </Card>
         {isAdmin && (
-          <Card title="Alerts above threshold by rule" className="xl:col-span-1">
+          <Card title="Score distribution">
+            <Columns rows={scoreRows} empty="No alerts yet." />
+          </Card>
+        )}
+        {isAdmin && (
+          <Card title="Alerts above threshold by rule">
             <HorizontalBars rows={ruleRows} empty="No alerts above threshold." />
           </Card>
         )}
@@ -99,15 +107,7 @@ export default function Dashboard() {
             <TrendLine rows={alertTrend} label="Alerts" empty="No alert history yet." />
           </Card>
         )}
-        {isAdmin && (
-          <Card title="Score distribution" className="xl:col-span-1">
-            <Columns rows={scoreRows} empty="No alerts yet." />
-          </Card>
-        )}
-        <Card title="Cases opened and approvals, last 14 days" className="xl:col-span-2">
-          <PairedBars rows={activityRows} seriesA="Cases opened" seriesB="Approved" empty="No case activity yet." />
-        </Card>
-        <Card title="Decisions" className="xl:col-span-1">
+        <Card title="Decisions">
           <Donut
             rows={[
               { name: "Approved", value: approved },

@@ -1,14 +1,20 @@
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import { api } from "../api/client";
-import { Card, EmptyState } from "./ui";
+import { buttonClass, Card, EmptyState } from "./ui";
 
 const EventSchema = z.object({ node: z.string(), kind: z.string(), payload: z.record(z.any()), created_at: z.string() });
 
-type Props = { caseId: number; polling: boolean };
+type Props = {
+  caseId: number;
+  polling: boolean;
+  /** Set only for failed cases. The button shows when this is passed. */
+  onRerun?: () => void;
+  rerunning?: boolean;
+};
 
 // Append-only case_events for one case. Polls while the case is still running.
-export default function AuditTimeline({ caseId, polling }: Props) {
+export default function AuditTimeline({ caseId, polling, onRerun, rerunning = false }: Props) {
   const eventsQ = useQuery({
     queryKey: ["events", caseId],
     queryFn: async () => z.array(EventSchema).parse(await api<unknown>(`/api/cases/${caseId}/events`)),
@@ -17,8 +23,21 @@ export default function AuditTimeline({ caseId, polling }: Props) {
 
   const events = eventsQ.data ?? [];
 
+  const action = onRerun ? (
+    <button
+      type="button"
+      disabled={rerunning}
+      onClick={() => {
+        if (window.confirm("Rerun the investigation for this case? The earlier events are kept.")) onRerun();
+      }}
+      className={buttonClass("secondary")}
+    >
+      Rerun investigation
+    </button>
+  ) : undefined;
+
   return (
-    <Card title="Audit timeline">
+    <Card title="Audit timeline" action={action}>
       {events.length === 0 ? (
         <EmptyState text="No events yet." />
       ) : (

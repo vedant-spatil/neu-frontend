@@ -66,7 +66,6 @@ export default function AlertQueue() {
     <div className="space-y-6">
       <PageHeader
         title={`Alert queue (${alerts.data?.total.toLocaleString() ?? 0})`}
-        subtitle="Highest risk first. Open a case to review the transactions."
         actions={
           <div className="flex flex-wrap items-center gap-3">
             <input

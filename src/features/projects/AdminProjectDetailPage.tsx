@@ -85,7 +85,7 @@ export default function AdminProjectDetailPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title={project.data.name} subtitle="Members, accounts and QA evaluations for this project." />
+      <PageHeader title={project.data.name} />
 
       <div className="grid gap-4 sm:grid-cols-2">
         <StatCard label="QA members" value={project.data.members.length} />

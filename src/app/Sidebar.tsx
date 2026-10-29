@@ -1,11 +1,9 @@
-import { useState, type ReactNode } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import { NavLink, useNavigate } from "react-router-dom";
-import { clearToken, getToken } from "../auth/session";
+import type { ReactNode } from "react";
+import { NavLink } from "react-router-dom";
+import { getToken } from "../auth/session";
 import { useMe } from "../auth/useAuth";
-import NotificationBell from "../components/NotificationBell";
 
-type Item = { to: string; label: string; icon: ReactNode };
+export type Item = { to: string; label: string; icon: ReactNode };
 
 const icon = (d: string) => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -21,7 +19,8 @@ const ICONS = {
   projects: icon("M3 7h18v12H3zM3 7l3-4h5l2 2h8"),
 };
 
-function itemsFor(role: string | undefined): Item[] {
+/** The navigation items for a role. Admin sees the alert queue and import; QA sees only their own cases and projects. */
+export function itemsFor(role: string | undefined): Item[] {
   const items: Item[] = [{ to: "/", label: "Dashboard", icon: ICONS.dashboard }];
   if (role === "admin") items.push({ to: "/alerts", label: "Alerts", icon: ICONS.alerts });
   items.push({ to: "/cases", label: role === "qa" ? "My cases" : "Cases", icon: ICONS.cases });
@@ -39,7 +38,12 @@ const linkClass = ({ isActive }: { isActive: boolean }) =>
     isActive ? "bg-brand-50 font-semibold text-brand-600" : "text-ink-600 hover:bg-page hover:text-ink-900"
   }`;
 
-function NavList({ items, onNavigate }: { items: Item[]; onNavigate?: () => void }) {
+/**
+ * The links. Labels show on the desktop rail only when it is hovered (the rail is inside a `group/side`), and always
+ * when showLabels is set, as in the phone menu.
+ */
+export function NavList({ items, onNavigate, showLabels = false }: { items: Item[]; onNavigate?: () => void; showLabels?: boolean }) {
+  const labelClass = showLabels ? "" : "opacity-0 transition-opacity group-hover/side:opacity-100";
   return (
     <>
       {items.map((item) => (
@@ -48,7 +52,7 @@ function NavList({ items, onNavigate }: { items: Item[]; onNavigate?: () => void
             <>
               {isActive && <span className="absolute inset-y-2 left-0 w-1 rounded-r-full bg-brand-600" />}
               <span className="shrink-0">{item.icon}</span>
-              <span className="whitespace-nowrap opacity-0 transition-opacity group-hover/side:opacity-100">{item.label}</span>
+              <span className={`whitespace-nowrap ${labelClass}`}>{item.label}</span>
             </>
           )}
         </NavLink>
@@ -57,81 +61,16 @@ function NavList({ items, onNavigate }: { items: Item[]; onNavigate?: () => void
   );
 }
 
-/** Left navigation rail on desktop (expands on hover to show labels). On phones it becomes a top bar with a menu. */
+/**
+ * The desktop navigation: a floating rounded panel at the left edge, below the top bar. It is narrow by default and
+ * widens on hover to show the labels. Phones use the menu in the top bar instead.
+ */
 export default function Sidebar() {
   const me = useMe();
-  const qc = useQueryClient();
-  const navigate = useNavigate();
-  const [menuOpen, setMenuOpen] = useState(false);
   if (!getToken()) return null;
-
-  const role = me.data?.role;
-  const items = itemsFor(role);
-  const initial = me.data?.email?.[0]?.toUpperCase() ?? "?";
-
-  function logout() {
-    clearToken();
-    qc.clear();
-    navigate("/login", { replace: true });
-  }
-
   return (
-    <>
-      {/* Desktop rail */}
-      <aside className="group/side fixed inset-y-0 left-0 z-20 hidden w-[72px] flex-col border-r border-line bg-white transition-[width] duration-200 hover:w-56 md:flex">
-        <div className="flex h-16 items-center px-5">
-          <span className="font-wordmark text-xl font-bold tracking-tight text-brand-600">NEU</span>
-        </div>
-        <nav className="flex flex-1 flex-col gap-1 px-3">
-          <NavList items={items} />
-        </nav>
-        <div className="flex flex-col gap-2 border-t border-line px-3 py-3">
-          <div className="flex h-10 items-center pl-1">
-            <NotificationBell />
-          </div>
-          <NavLink to="/account" className={linkClass}>
-            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand-600 text-xs font-semibold text-white">{initial}</span>
-            <span className="whitespace-nowrap opacity-0 transition-opacity group-hover/side:opacity-100">Account</span>
-          </NavLink>
-          <button
-            type="button"
-            onClick={logout}
-            className="flex h-11 items-center gap-3 rounded-xl px-3 text-sm text-ink-600 hover:bg-page hover:text-ink-900"
-          >
-            <span className="shrink-0">{icon("M9 21H5V3h4M16 17l5-5-5-5M21 12H9")}</span>
-            <span className="whitespace-nowrap opacity-0 transition-opacity group-hover/side:opacity-100">Logout</span>
-          </button>
-        </div>
-      </aside>
-
-      {/* Phone top bar */}
-      <header className="sticky top-0 z-20 flex items-center justify-between border-b border-line bg-white px-4 py-3 md:hidden">
-        <span className="font-wordmark text-xl font-bold tracking-tight text-brand-600">NEU</span>
-        <div className="flex items-center gap-2">
-          <NotificationBell />
-          <button
-            type="button"
-            aria-label={menuOpen ? "Close menu" : "Open menu"}
-            aria-expanded={menuOpen}
-            onClick={() => setMenuOpen((o) => !o)}
-            className="grid h-10 w-10 place-items-center rounded-xl text-ink-600 ring-1 ring-line"
-          >
-            {icon(menuOpen ? "M6 6l12 12M18 6L6 18" : "M4 7h16M4 12h16M4 17h16")}
-          </button>
-        </div>
-      </header>
-      {menuOpen && (
-        <div className="fixed inset-x-0 bottom-0 top-[57px] z-20 flex flex-col gap-1 overflow-auto bg-white p-4 md:hidden">
-          <NavList items={items} onNavigate={() => setMenuOpen(false)} />
-          <NavLink to="/account" onClick={() => setMenuOpen(false)} className={linkClass}>
-            <span className="grid h-8 w-8 place-items-center rounded-full bg-brand-600 text-xs font-semibold text-white">{initial}</span>
-            <span>Account</span>
-          </NavLink>
-          <button type="button" onClick={logout} className="flex h-11 items-center gap-3 rounded-xl px-3 text-sm text-ink-600 hover:bg-page">
-            Logout
-          </button>
-        </div>
-      )}
-    </>
+    <aside className="group/side fixed bottom-4 left-4 top-20 z-20 hidden w-[72px] flex-col gap-1 rounded-3xl bg-white p-3 shadow-sm ring-1 ring-line transition-[width] duration-200 hover:w-56 md:flex">
+      <NavList items={itemsFor(me.data?.role)} />
+    </aside>
   );
 }

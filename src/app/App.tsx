@@ -3,6 +3,7 @@ import { getToken } from "../auth/session";
 import { useMe } from "../auth/useAuth";
 import type { Role } from "../api/schemas";
 import Sidebar from "./Sidebar";
+import TopNav from "./TopNav";
 import Live from "./Live";
 import LoginPage from "../features/login/LoginPage";
 import SignupPage from "../features/login/SignupPage";
@@ -41,9 +42,11 @@ function RequireRole({ roles, children }: { roles: Role[]; children: JSX.Element
 export default function App() {
   return (
     <div className="min-h-screen">
+      <TopNav />
       <Sidebar />
       <Live />
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 md:pl-[104px] md:pr-8">
+      {/* md:pl-[104px] clears the floating rail: 16px from the edge, 72px wide, then a 16px gap. */}
+      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 md:pl-[104px] md:pr-8">
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />

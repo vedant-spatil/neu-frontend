@@ -26,7 +26,12 @@ export const GraphSchema = z.object({
   }),
 });
 
-export const UserSchema = z.object({ id: z.number(), email: z.string(), role: z.string() });
+export const UserSchema = z.object({
+  id: z.number(),
+  email: z.string(),
+  role: z.string(),
+  has_avatar: z.boolean().optional(),
+});
 export const TokenSchema = z.object({ access_token: z.string(), token_type: z.string() });
 
 export const TrendsSchema = z.object({

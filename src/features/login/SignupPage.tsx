@@ -61,7 +61,6 @@ export default function SignupPage() {
         <div className="text-center">
           <span className="font-wordmark text-3xl font-bold tracking-tight text-brand-600">NEU</span>
           <h1 className="mt-4 text-xl font-semibold text-ink-900">Create an account</h1>
-          <p className="mt-1 text-sm text-ink-600">New accounts are reviewer (QA) accounts.</p>
         </div>
         <label className="block text-sm font-medium text-ink-900">
           Email

@@ -8,6 +8,7 @@ import { useMe } from "../../auth/useAuth";
 import { Donut, HorizontalBars, PairedBars, TrendLine } from "../../components/charts";
 import { buttonClass, Card, EmptyState, ErrorState, PageHeader, StatCard, StatusBadge } from "../../components/ui";
 import { ruleLabel } from "../../lib/labels";
+import RecentProjects from "./RecentProjects";
 
 const DashboardSchema = z.object({
   cases_by_status: z.record(z.number()),
@@ -128,7 +129,8 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* Row 3: one case per account. Each row opens the account's case. */}
+      {/* Row 3: top accounts (one case per account) beside the newest projects. */}
+      <div className="grid gap-6 xl:grid-cols-2">
       {isAdmin && (
         <Card title="Top accounts by alerts">
           {d.top_accounts_by_alerts.length === 0 ? (
@@ -184,6 +186,8 @@ export default function Dashboard() {
           )}
         </Card>
       )}
+        <RecentProjects />
+      </div>
     </div>
   );
 }

@@ -51,6 +51,7 @@ export const ProjectSummarySchema = z.object({
   name: z.string(),
   members: z.number().optional(),
   accounts: z.number().optional(),
+  created_at: z.string().nullable().optional(),
 });
 export type ProjectSummary = z.infer<typeof ProjectSummarySchema>;
 

@@ -3,9 +3,9 @@ import { createPortal } from "react-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import { api } from "../../api/client";
-import { uploadFile } from "../../api/upload";
 import FieldSelect from "../../components/FieldSelect";
 import { buttonClass, Card, ErrorState, PageHeader, StatusBadge, Stepper } from "../../components/ui";
+import { saveSyncStarted, savedImportId, savedSyncStarted, startUpload, useUploadState } from "./importState";
 
 const ImportSchema = z.object({
   id: z.number(),
@@ -15,7 +15,6 @@ const ImportSchema = z.object({
   report: z.record(z.any()),
   created_at: z.string(),
 });
-const UploadSchema = z.object({ id: z.number(), status: z.string(), duplicate: z.boolean() });
 const ColumnsSchema = z.object({
   columns: z.array(z.string()),
   auto_mapping: z.record(z.string()),
@@ -25,37 +24,46 @@ const ColumnsSchema = z.object({
 // Statuses while the backend is still working on a sync. The page polls until one of these clears.
 const BUSY = ["validating", "loading", "triaging"];
 
+// Rule groups finish inside the alerts stage. Each one moves the bar to its share of the whole sync.
+const RULE_PROGRESS: [prefix: string, percent: number][] = [
+  ["R2_fan_out", 35],
+  ["R3_fan_in", 45],
+  ["R4", 55],
+  ["R5-R7", 65],
+];
+
+/** How far the sync has got, 0 to 100, from its status and the stage it last reported. */
+export function syncPercent(status: string, report: Record<string, unknown>): number {
+  if (status === "triaged" || status === "failed" || status === "rejected") return 100;
+  if (status === "validating") return 5;
+  const stage = typeof report.stage === "string" ? report.stage : "";
+  if (stage === "alerts") return 10;
+  const rule = RULE_PROGRESS.find(([prefix]) => stage.startsWith(prefix));
+  if (rule) return rule[1];
+  if (stage === "transactions") return 70;
+  if (stage === "parties") return 80;
+  if (stage === "graph") return 90;
+  return 10;
+}
+
 export default function ImportPage() {
   const [file, setFile] = useState<File | null>(null);
-  const [importId, setImportId] = useState<number | null>(null);
+  // The import and the sync survive a tab change: their ids are kept in sessionStorage (see importState.ts).
+  const [importId, setImportId] = useState<number | null>(() => savedImportId());
   const [mapping, setMapping] = useState<Record<string, string>>({});
-  // Upload progress: `sent` is the fraction of the file the browser has sent; `saving` means every byte has left the
-  // browser and the server is still hashing and writing it.
-  const [sent, setSent] = useState<number | null>(null);
-  const [saving, setSaving] = useState(false);
-  // The import whose sync the admin started in this visit. Progress is shown only for that import, or while a sync runs.
-  const [syncStarted, setSyncStarted] = useState<number | null>(null);
+  // Progress shows for the import whose sync was started in this browser tab, or while a sync is running.
+  const [syncStarted, setSyncStarted] = useState<number | null>(() => savedSyncStarted());
+  const up = useUploadState();
 
-  const upload = useMutation({
-    mutationFn: (f: File) => {
-      setSent(0);
-      setSaving(false);
-      return uploadFile(
-        "/api/imports",
-        f,
-        (fraction) => setSent(fraction),
-        () => setSaving(true),
-      ).then((raw) => UploadSchema.parse(raw));
-    },
-    onSuccess: (u) => {
-      setMapping({});
-      setImportId(u.id);
-    },
-    onSettled: () => {
-      setSent(null);
-      setSaving(false);
-    },
-  });
+  const uploadSelected = () => {
+    if (!file) return;
+    startUpload(file)
+      .then((id) => {
+        setMapping({});
+        setImportId(id);
+      })
+      .catch(() => undefined); // the error is in the upload state and shown below
+  };
 
   const columns = useQuery({
     queryKey: ["import-columns", importId],
@@ -80,6 +88,7 @@ export default function ImportPage() {
     mutationFn: (id: number) =>
       api<unknown>(`/api/imports/${id}/sync`, { method: "POST", body: JSON.stringify({ mapping }) }),
     onSuccess: (_, id) => {
+      saveSyncStarted(id);
       setSyncStarted(id);
       imp.refetch();
     },
@@ -122,6 +131,8 @@ export default function ImportPage() {
   const updatedAt = typeof report.updated_at === "string" ? Date.parse(report.updated_at) : NaN;
   const quietSeconds = Number.isNaN(updatedAt) ? null : Math.max(0, Math.round((Date.now() - updatedAt) / 1000));
 
+  const percent = imp.data ? syncPercent(imp.data.status, report) : 0;
+
   // Step 0 upload, 1 map columns, 2 sync (once a sync has started).
   const step = imp.data ? 2 : columns.data ? 1 : 0;
 
@@ -129,18 +140,18 @@ export default function ImportPage() {
     <div className="space-y-6">
       <PageHeader title="Import transactions" />
 
-      {upload.isPending && createPortal(
+      {up.busy && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink-900/30 px-4">
           <div role="dialog" aria-modal="true" aria-labelledby="upload-title"
                className="w-full max-w-xs rounded-2xl bg-white p-6 text-center shadow-lg ring-1 ring-line">
             <div className="flex justify-center">
-              <RedRing fraction={saving ? null : sent} />
+              <RedRing fraction={up.saving ? null : up.sent} />
             </div>
             <h2 id="upload-title" className="mt-4 text-sm font-semibold text-ink-900">
-              {saving ? "Saving the file" : "Sending the file"}
+              {up.saving ? "Saving the file" : "Sending the file"}
             </h2>
             <p className="mt-1 text-sm text-ink-600">
-              {saving ? "Large files take a minute or two." : `${Math.round((sent ?? 0) * 100)}% sent`}
+              {up.saving ? "Large files take a minute or two." : `${Math.round((up.sent ?? 0) * 100)}% sent`}
             </p>
           </div>
         </div>,
@@ -154,16 +165,16 @@ export default function ImportPage() {
           <input
             type="file"
             accept=".csv"
-            disabled={upload.isPending}
+            disabled={up.busy}
             onChange={(e) => setFile(e.target.files?.[0] ?? null)}
             className="text-ink-600 file:mr-3 file:rounded-lg file:border-0 file:bg-page file:px-3 file:py-2 file:text-ink-900"
           />
-          <button disabled={!file || upload.isPending} onClick={() => file && upload.mutate(file)} className={buttonClass()}>
+          <button disabled={!file || up.busy} onClick={uploadSelected} className={buttonClass()}>
             Upload
           </button>
         </div>
 
-        {upload.isError && <div className="mt-3"><ErrorState text={`Upload failed. ${(upload.error as Error).message}`} /></div>}
+        {up.error && <div className="mt-3"><ErrorState text={`Upload failed. ${up.error}`} /></div>}
       </Card>
 
       {columns.data && (
@@ -231,6 +242,21 @@ export default function ImportPage() {
           title="3. Sync progress"
           action={<StatusBadge status={imp.data.status} plain />}
         >
+          <div
+            className="mb-5 h-2 overflow-hidden rounded-full bg-line"
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={percent}
+          >
+            <div
+              className={`h-full rounded-full transition-[width] duration-500 ${
+                imp.data.status === "triaged" ? "bg-ok-600" : "bg-brand-600"
+              }`}
+              style={{ width: `${percent}%` }}
+            />
+          </div>
+
           <div className="grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
             <Stat label="File" value={imp.data.filename} />
             <Stat label="Size" value={`${(imp.data.size_bytes / 1e6).toFixed(1)} MB`} />
@@ -244,14 +270,9 @@ export default function ImportPage() {
 
           {busy && (
             <div className="mt-5 flex items-center gap-3">
-              <RedRing fraction={null} small />
-              <span className="text-sm text-ink-600">
-                Working on the file{typeof report.stage === "string" ? `: ${report.stage}` : ""}
-                {quietSeconds !== null && ` · last update ${quietSeconds}s ago`}
-                {quietSeconds !== null && quietSeconds > 300 && (
-                  <span className="text-brand-600"> · no progress for 5 minutes; check the API logs or reset</span>
-                )}
-              </span>
+              {quietSeconds !== null && quietSeconds > 300 && (
+                <span className="text-sm text-brand-600">No progress for 5 minutes</span>
+              )}
               <button disabled={reset.isPending} onClick={() => importId !== null && reset.mutate(importId)} className={`ml-auto ${buttonClass("secondary")}`}>
                 Reset stuck import
               </button>

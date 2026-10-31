@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import { api } from "../../api/client";
@@ -123,7 +124,7 @@ export default function ImportPage() {
     <div className="space-y-6">
       <PageHeader title="Import transactions" />
 
-      {upload.isPending && (
+      {upload.isPending && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink-900/30 px-4">
           <div role="dialog" aria-modal="true" aria-labelledby="upload-title"
                className="w-full max-w-xs rounded-2xl bg-white p-6 text-center shadow-lg ring-1 ring-line">
@@ -137,7 +138,8 @@ export default function ImportPage() {
               {saving ? "Large files take a minute or two." : `${Math.round((sent ?? 0) * 100)}% sent`}
             </p>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
 
       <Stepper steps={["Upload", "Map columns", "Sync"]} current={step} />

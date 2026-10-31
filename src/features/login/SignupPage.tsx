@@ -56,12 +56,10 @@ export default function SignupPage() {
     "mt-1.5 w-full rounded-lg bg-white px-3 py-2.5 text-ink-900 ring-1 ring-line outline-none focus:ring-2 focus:ring-brand-500";
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4">
+    <div className="flex min-h-dvh items-center justify-center px-4 py-10">
       <form onSubmit={onSubmit} className="w-full max-w-sm space-y-5 rounded-2xl bg-white p-8 shadow-sm ring-1 ring-line">
         <div className="text-center">
-          <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-brand-600 text-lg font-bold text-white">
-            NEU
-          </span>
+          <span className="font-wordmark text-3xl font-bold tracking-tight text-brand-600">NEU</span>
           <h1 className="mt-4 text-xl font-semibold text-ink-900">Create an account</h1>
           <p className="mt-1 text-sm text-ink-600">New accounts are reviewer (QA) accounts.</p>
         </div>

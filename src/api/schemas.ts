@@ -26,7 +26,12 @@ export const GraphSchema = z.object({
   }),
 });
 
-export const UserSchema = z.object({ id: z.number(), email: z.string(), role: z.string() });
+export const UserSchema = z.object({
+  id: z.number(),
+  email: z.string(),
+  role: z.string(),
+  has_avatar: z.boolean().optional(),
+});
 export const TokenSchema = z.object({ access_token: z.string(), token_type: z.string() });
 
 export const TrendsSchema = z.object({
@@ -83,3 +88,29 @@ export const QaAccountSchema = z.object({
   source: z.string().nullable(),
 });
 export type QaAccount = z.infer<typeof QaAccountSchema>;
+
+// Case-workflow telemetry from CloudWatch Logs (app/services/observability.py). Optional fields are absent when the
+// observability log group is not configured.
+export const ObservabilitySchema = z.object({
+  enabled: z.boolean(),
+  window_hours: z.number().optional(),
+  case_runs: z.number().optional(),
+  errors: z.number().optional(),
+  p95_ms: z.number().nullable().optional(),
+  nodes: z
+    .array(z.object({ node: z.string(), count: z.number(), p95_ms: z.number().nullable(), errors: z.number() }))
+    .optional(),
+  error_types: z.array(z.object({ error_type: z.string(), count: z.number() })).optional(),
+  recent: z
+    .array(
+      z.object({
+        time: z.string(),
+        case_id: z.number().nullable(),
+        attempt: z.number(),
+        status: z.string(),
+        duration_ms: z.number().nullable(),
+      }),
+    )
+    .optional(),
+});
+export type Observability = z.infer<typeof ObservabilitySchema>;

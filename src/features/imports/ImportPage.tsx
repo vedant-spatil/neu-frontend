@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { z } from "zod";
-import { api, API_BASE } from "../../api/client";
-import { getToken } from "../../auth/session";
+import { api } from "../../api/client";
+import { uploadFile } from "../../api/upload";
+import FieldSelect from "../../components/FieldSelect";
 import { buttonClass, Card, ErrorState, PageHeader, StatusBadge, Stepper } from "../../components/ui";
 
 const ImportSchema = z.object({
@@ -27,22 +28,29 @@ export default function ImportPage() {
   const [file, setFile] = useState<File | null>(null);
   const [importId, setImportId] = useState<number | null>(null);
   const [mapping, setMapping] = useState<Record<string, string>>({});
+  // Upload progress: `sent` is the fraction of the file the browser has sent; `saving` means every byte has left the
+  // browser and the server is still hashing and writing it.
+  const [sent, setSent] = useState<number | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const upload = useMutation({
-    mutationFn: async (f: File) => {
-      const body = new FormData();
-      body.append("file", f);
-      const res = await fetch(`${API_BASE}/api/imports`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${getToken() ?? ""}` },
-        body,
-      });
-      if (!res.ok) throw new Error(`upload failed: ${res.status}`);
-      return UploadSchema.parse(await res.json());
+    mutationFn: (f: File) => {
+      setSent(0);
+      setSaving(false);
+      return uploadFile(
+        "/api/imports",
+        f,
+        (fraction) => setSent(fraction),
+        () => setSaving(true),
+      ).then((raw) => UploadSchema.parse(raw));
     },
     onSuccess: (u) => {
       setMapping({});
       setImportId(u.id);
+    },
+    onSettled: () => {
+      setSent(null);
+      setSaving(false);
     },
   });
 
@@ -90,6 +98,12 @@ export default function ImportPage() {
       return next;
     });
 
+  // A CSV column can feed one field only: a field's choices leave out the columns other fields already use.
+  const optionsFor = (field: string): string[] => {
+    const taken = new Set(Object.entries(mapping).filter(([f]) => f !== field).map(([, c]) => c));
+    return (columns.data?.columns ?? []).filter((c) => !taken.has(c));
+  };
+
   const report = imp.data?.report ?? {};
   const validation = report.validation as
     | { rows?: number; errors?: Record<string, number>; non_usd_rows?: number }
@@ -101,9 +115,7 @@ export default function ImportPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Import transactions"
-      />
+      <PageHeader title="Import transactions" />
 
       <Stepper steps={["Upload", "Map columns", "Sync"]} current={step} />
 
@@ -112,6 +124,7 @@ export default function ImportPage() {
           <input
             type="file"
             accept=".csv"
+            disabled={upload.isPending}
             onChange={(e) => setFile(e.target.files?.[0] ?? null)}
             className="text-ink-600 file:mr-3 file:rounded-lg file:border-0 file:bg-page file:px-3 file:py-2 file:text-ink-900"
           />
@@ -119,11 +132,29 @@ export default function ImportPage() {
             Upload
           </button>
         </div>
-        {upload.isError && <div className="mt-3"><ErrorState text="Upload failed." /></div>}
+
+        {upload.isPending && (
+          <div className="mt-4 flex items-center gap-4">
+            <RedRing fraction={saving ? null : sent} />
+            <div className="text-sm text-ink-600">
+              {saving
+                ? "Saving the file on the server. Large files take a minute or two."
+                : `Sending the file… ${Math.round((sent ?? 0) * 100)}%`}
+            </div>
+          </div>
+        )}
+        {upload.isError && <div className="mt-3"><ErrorState text={`Upload failed. ${(upload.error as Error).message}`} /></div>}
       </Card>
 
       {columns.data && (
         <Card title="2. Map columns">
+          <p className="mb-4 flex items-center gap-2 text-sm text-ink-600">
+            <InfoIcon />
+            {missing.length > 0
+              ? `Map these required fields first: ${missing.join(", ")}`
+              : "All required fields are mapped."}
+          </p>
+
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-line text-left text-ink-600">
@@ -138,29 +169,25 @@ export default function ImportPage() {
                 const chosen = mapping[f.field] ?? "";
                 return (
                   <tr key={f.field} className="border-b border-line last:border-0">
-                    <td className="py-2 font-mono text-ink-900">{f.field}</td>
-                    <td className="py-2">
+                    <td className="py-3 font-mono text-ink-900">{f.field}</td>
+                    <td className="py-3">
                       <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                         f.required ? "bg-brand-50 text-brand-600" : "bg-line text-ink-600"
                       }`}>
                         {f.required ? "Required" : "Optional"}
                       </span>
                     </td>
-                    <td className="py-2">
-                      <select
-                        value={chosen}
-                        onChange={(e) => setField(f.field, e.target.value)}
-                        disabled={busy}
-                        className="w-full rounded-lg bg-white px-3 py-2 text-ink-900 ring-1 ring-line disabled:opacity-60"
-                      >
-                        <option value="">— not mapped —</option>
-                        {columns.data.columns.map((c) => <option key={c} value={c}>{c}</option>)}
-                      </select>
-                      {auto !== undefined && chosen === auto && (
-                        <span className="mt-1 inline-block rounded-full bg-ok-50 px-2 py-0.5 text-xs text-ok-600">
-                          Matched automatically
-                        </span>
-                      )}
+                    <td className="py-3">
+                      <div className="flex items-center gap-2">
+                        <FieldSelect
+                          label={`CSV column for ${f.field}`}
+                          value={chosen}
+                          options={optionsFor(f.field)}
+                          disabled={busy}
+                          onChange={(column) => setField(f.field, column)}
+                        />
+                        {auto !== undefined && chosen === auto && <AutoTick />}
+                      </div>
                     </td>
                   </tr>
                 );
@@ -168,14 +195,7 @@ export default function ImportPage() {
             </tbody>
           </table>
 
-          <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-            {missing.length > 0 ? (
-              <div className="rounded-lg bg-warn-50 px-3 py-2 text-sm text-warn-600">
-                Map these required fields first: {missing.join(", ")}
-              </div>
-            ) : (
-              <div className="rounded-lg bg-ok-50 px-3 py-2 text-sm text-ok-600">All required fields are mapped.</div>
-            )}
+          <div className="mt-5 flex flex-wrap items-center justify-end gap-3">
             <button disabled={!canSync} onClick={() => importId !== null && sync.mutate(importId)} className={buttonClass()}>
               Sync data
             </button>
@@ -204,6 +224,8 @@ export default function ImportPage() {
 
           {busy && (
             <div className="mt-5 flex items-center gap-3">
+              <RedRing fraction={null} small />
+              <span className="text-sm text-ink-600">Working on the file…</span>
               <button disabled={reset.isPending} onClick={() => importId !== null && reset.mutate(importId)} className={buttonClass("secondary")}>
                 Reset stuck import
               </button>
@@ -227,6 +249,56 @@ export default function ImportPage() {
         </Card>
       )}
     </div>
+  );
+}
+
+/** A red progress ring. With a null fraction it spins, for work whose length is not known. */
+function RedRing({ fraction, small = false }: { fraction: number | null; small?: boolean }) {
+  const size = small ? 24 : 44;
+  const r = small ? 9 : 18;
+  const c = 2 * Math.PI * r;
+  const offset = fraction === null ? c * 0.75 : c * (1 - Math.min(1, Math.max(0, fraction)));
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox={`0 0 ${size} ${size}`}
+      className={`shrink-0 ${fraction === null ? "animate-spin" : ""}`}
+      role="img"
+      aria-label={fraction === null ? "Working" : `${Math.round(fraction * 100)} percent`}
+    >
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="currentColor" strokeWidth={small ? 3 : 4}
+              className="text-line" />
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="currentColor" strokeWidth={small ? 3 : 4}
+              strokeLinecap="round" strokeDasharray={c} strokeDashoffset={offset}
+              transform={`rotate(-90 ${size / 2} ${size / 2})`} className="text-brand-600" />
+    </svg>
+  );
+}
+
+/** A small green tick at the end of a dropdown: the value was matched to the field automatically. */
+function AutoTick() {
+  return (
+    <span
+      title="Matched automatically"
+      aria-label="Matched automatically"
+      className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-ok-50 text-ok-600"
+    >
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"
+           strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <path d="M20 6 9 17l-5-5" />
+      </svg>
+    </span>
+  );
+}
+
+function InfoIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+         strokeLinecap="round" className="shrink-0 text-ink-400" aria-hidden>
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 16v-4M12 8h.01" />
+    </svg>
   );
 }
 

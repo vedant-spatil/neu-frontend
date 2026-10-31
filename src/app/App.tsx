@@ -3,6 +3,7 @@ import { getToken } from "../auth/session";
 import { useMe } from "../auth/useAuth";
 import type { Role } from "../api/schemas";
 import Sidebar from "./Sidebar";
+import TopNav from "./TopNav";
 import Live from "./Live";
 import LoginPage from "../features/login/LoginPage";
 import SignupPage from "../features/login/SignupPage";
@@ -13,6 +14,7 @@ import CasesList from "../features/cases/CasesList";
 import ImportPage from "../features/imports/ImportPage";
 import AccountPage from "../features/account/AccountPage";
 import NotificationsPage from "../features/notifications/NotificationsPage";
+import ObservabilityPage from "../features/observability/ObservabilityPage";
 import AdminProjectsPage from "../features/projects/AdminProjectsPage";
 import AdminProjectDetailPage from "../features/projects/AdminProjectDetailPage";
 import QaProjectsPage from "../features/projects/QaProjectsPage";
@@ -38,15 +40,16 @@ function RequireRole({ roles, children }: { roles: Role[]; children: JSX.Element
   return children;
 }
 
-export default function App() {
+/** The signed-in app: top bar, floating sidebar, live updates, and the pages. */
+function Shell() {
   return (
     <div className="min-h-screen">
+      <TopNav />
       <Sidebar />
       <Live />
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 md:pl-[104px] md:pr-8">
+      {/* md:pl-[104px] clears the floating rail: 16px from the edge, 72px wide, then a 16px gap. */}
+      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 md:pl-[104px] md:pr-8">
         <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/signup" element={<SignupPage />} />
           <Route path="/" element={<RequireAuth><Dashboard /></RequireAuth>} />
           <Route path="/alerts" element={<RequireAuth><RequireRole roles={["admin"]}><AlertQueue /></RequireRole></RequireAuth>} />
           <Route path="/import" element={<RequireAuth><RequireRole roles={["admin"]}><ImportPage /></RequireRole></RequireAuth>} />
@@ -54,6 +57,7 @@ export default function App() {
           <Route path="/cases/:caseId" element={<RequireAuth><CaseDetail /></RequireAuth>} />
           <Route path="/notifications" element={<RequireAuth><NotificationsPage /></RequireAuth>} />
           <Route path="/account" element={<RequireAuth><AccountPage /></RequireAuth>} />
+          <Route path="/admin/observability" element={<RequireAuth><RequireRole roles={["admin"]}><ObservabilityPage /></RequireRole></RequireAuth>} />
           <Route path="/admin/projects" element={<RequireAuth><RequireRole roles={["admin"]}><AdminProjectsPage /></RequireRole></RequireAuth>} />
           <Route path="/admin/projects/:projectId" element={<RequireAuth><RequireRole roles={["admin"]}><AdminProjectDetailPage /></RequireRole></RequireAuth>} />
           <Route path="/qa/projects" element={<RequireAuth><RequireRole roles={["qa"]}><QaProjectsPage /></RequireRole></RequireAuth>} />
@@ -62,5 +66,16 @@ export default function App() {
         </Routes>
       </main>
     </div>
+  );
+}
+
+export default function App() {
+  // The auth pages render alone: no top bar, no sidebar, and no main padding, so they fit the viewport.
+  return (
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/signup" element={<SignupPage />} />
+      <Route path="*" element={<Shell />} />
+    </Routes>
   );
 }

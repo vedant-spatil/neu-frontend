@@ -41,15 +41,22 @@ const linkClass = ({ isActive }: { isActive: boolean }) =>
   }`;
 
 /**
- * The links. Labels show on the desktop rail only when it is hovered (the rail is inside a `group/side`), and always
- * when showLabels is set, as in the phone menu.
+ * The links. The desktop rail shows icons only: each link has a tooltip (title) and its label stays for screen readers.
+ * The phone menu sets showLabels to show the labels.
  */
 export function NavList({ items, onNavigate, showLabels = false }: { items: Item[]; onNavigate?: () => void; showLabels?: boolean }) {
-  const labelClass = showLabels ? "" : "opacity-0 transition-opacity group-hover/side:opacity-100";
+  const labelClass = showLabels ? "" : "sr-only";
   return (
     <>
       {items.map((item) => (
-        <NavLink key={item.to} to={item.to} end={item.to === "/"} className={linkClass} onClick={onNavigate}>
+        <NavLink
+          key={item.to}
+          to={item.to}
+          end={item.to === "/"}
+          className={linkClass}
+          onClick={onNavigate}
+          title={showLabels ? undefined : item.label}
+        >
           {({ isActive }) => (
             <>
               {isActive && <span className="absolute inset-y-2 left-0 w-1 rounded-r-full bg-brand-600" />}
@@ -64,14 +71,14 @@ export function NavList({ items, onNavigate, showLabels = false }: { items: Item
 }
 
 /**
- * The desktop navigation: a floating rounded panel at the left edge, below the top bar. It is narrow by default and
- * widens on hover to show the labels. Phones use the menu in the top bar instead.
+ * The desktop navigation: a narrow rounded panel at the left edge, below the top bar, as tall as its icons. Phones use
+ * the menu in the top bar instead.
  */
 export default function Sidebar() {
   const me = useMe();
   if (!getToken()) return null;
   return (
-    <aside className="group/side fixed bottom-4 left-4 top-20 z-20 hidden w-[72px] flex-col gap-1 rounded-3xl bg-white p-3 shadow-sm ring-1 ring-line transition-[width] duration-200 hover:w-56 md:flex">
+    <aside className="fixed left-4 top-20 z-20 hidden w-[72px] flex-col gap-1 rounded-3xl bg-white p-3 shadow-sm ring-1 ring-line md:flex">
       <NavList items={itemsFor(me.data?.role)} />
     </aside>
   );

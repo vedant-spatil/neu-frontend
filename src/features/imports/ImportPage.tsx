@@ -32,6 +32,8 @@ export default function ImportPage() {
   // browser and the server is still hashing and writing it.
   const [sent, setSent] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
+  // The import whose sync the admin started in this visit. Progress is shown only for that import, or while a sync runs.
+  const [syncStarted, setSyncStarted] = useState<number | null>(null);
 
   const upload = useMutation({
     mutationFn: (f: File) => {
@@ -68,6 +70,7 @@ export default function ImportPage() {
   const imp = useQuery({
     queryKey: ["import", importId],
     enabled: importId !== null,
+    // Fetched so a sync already running is shown; a finished import is not shown until Sync data is clicked.
     queryFn: async () => ImportSchema.parse(await api<unknown>(`/api/imports/${importId}`)),
     refetchInterval: (q) => (q.state.data && BUSY.includes(q.state.data.status) ? 2000 : false),
   });
@@ -75,7 +78,10 @@ export default function ImportPage() {
   const sync = useMutation({
     mutationFn: (id: number) =>
       api<unknown>(`/api/imports/${id}/sync`, { method: "POST", body: JSON.stringify({ mapping }) }),
-    onSuccess: () => imp.refetch(),
+    onSuccess: (_, id) => {
+      setSyncStarted(id);
+      imp.refetch();
+    },
   });
 
   // Marks a busy import as failed when no sync is running for it (for example after a crash). Data already
@@ -117,6 +123,23 @@ export default function ImportPage() {
     <div className="space-y-6">
       <PageHeader title="Import transactions" />
 
+      {upload.isPending && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink-900/30 px-4">
+          <div role="dialog" aria-modal="true" aria-labelledby="upload-title"
+               className="w-full max-w-xs rounded-2xl bg-white p-6 text-center shadow-lg ring-1 ring-line">
+            <div className="flex justify-center">
+              <RedRing fraction={saving ? null : sent} />
+            </div>
+            <h2 id="upload-title" className="mt-4 text-sm font-semibold text-ink-900">
+              {saving ? "Saving the file" : "Sending the file"}
+            </h2>
+            <p className="mt-1 text-sm text-ink-600">
+              {saving ? "Large files take a minute or two." : `${Math.round((sent ?? 0) * 100)}% sent`}
+            </p>
+          </div>
+        </div>
+      )}
+
       <Stepper steps={["Upload", "Map columns", "Sync"]} current={step} />
 
       <Card title="1. Upload">
@@ -133,16 +156,6 @@ export default function ImportPage() {
           </button>
         </div>
 
-        {upload.isPending && (
-          <div className="mt-4 flex items-center gap-4">
-            <RedRing fraction={saving ? null : sent} />
-            <div className="text-sm text-ink-600">
-              {saving
-                ? "Saving the file on the server. Large files take a minute or two."
-                : `Sending the file… ${Math.round((sent ?? 0) * 100)}%`}
-            </div>
-          </div>
-        )}
         {upload.isError && <div className="mt-3"><ErrorState text={`Upload failed. ${(upload.error as Error).message}`} /></div>}
       </Card>
 
@@ -206,7 +219,7 @@ export default function ImportPage() {
         </Card>
       )}
 
-      {imp.data && (
+      {imp.data && (syncStarted === importId || busy) && (
         <Card
           title="3. Sync progress"
           action={<StatusBadge status={imp.data.status} />}

@@ -170,12 +170,10 @@ export default function Dashboard() {
                           )}
                         </td>
                         <td className="py-3 text-right">
-                          <span className="inline-flex min-w-8 justify-center rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-semibold text-brand-600">
-                            {a.alerts}
-                          </span>
+                          <span className="font-semibold text-brand-600">{a.alerts}</span>
                         </td>
                         <td className="py-3 pl-6">
-                          {a.case_status !== null ? <StatusBadge status={a.case_status} /> : <span className="text-ink-400">—</span>}
+                          {a.case_status !== null ? <StatusBadge status={a.case_status} plain /> : <span className="text-ink-400">—</span>}
                         </td>
                       </tr>
                     );

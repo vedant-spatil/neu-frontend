@@ -45,10 +45,11 @@ export function StatCard({
   trend?: { text: string; tone: "up" | "down" | "neutral" };
   icon?: ReactNode;
 }) {
+  // Coloured text only, no background: the trend reads as a label, not a badge.
   const tone = {
-    up: "bg-ok-50 text-ok-600",
-    down: "bg-brand-50 text-brand-600",
-    neutral: "bg-info-50 text-info-600",
+    up: "text-ok-600",
+    down: "text-brand-600",
+    neutral: "text-info-600",
   }[trend?.tone ?? "neutral"];
   return (
     <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-line">
@@ -58,7 +59,7 @@ export function StatCard({
       </div>
       <div className="mt-2 text-3xl font-semibold text-ink-900">{value}</div>
       {trend && (
-        <span className={`mt-3 inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${tone}`}>{trend.text}</span>
+        <span className={`mt-3 inline-flex text-xs font-medium ${tone}`}>{trend.text}</span>
       )}
     </div>
   );
@@ -89,12 +90,24 @@ const STATUS_HINT: Record<string, string> = {
   awaiting_review: "The workflow has finished. An investigator must approve or close the case.",
 };
 
-/** Coloured pill for a case or import status. Unknown statuses get a neutral pill. */
-export function StatusBadge({ status }: { status: string }) {
+/**
+ * Status label for a case or import. By default a coloured pill; `plain` shows only the coloured text, for tables
+ * where the colour alone carries the status. Unknown statuses get neutral text.
+ */
+export function StatusBadge({ status, plain = false }: { status: string; plain?: boolean }) {
   const tone = STATUS_TONE[status] ?? "bg-line text-ink-600";
+  const label = STATUS_LABEL[status] ?? status.replace(/_/g, " ");
+  if (plain) {
+    const text = tone.split(" ").find((c) => c.startsWith("text-")) ?? "text-ink-600";
+    return (
+      <span title={STATUS_HINT[status]} className={`text-xs font-medium ${text}`}>
+        {label}
+      </span>
+    );
+  }
   return (
     <span title={STATUS_HINT[status]} className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${tone}`}>
-      {STATUS_LABEL[status] ?? status.replace(/_/g, " ")}
+      {label}
     </span>
   );
 }

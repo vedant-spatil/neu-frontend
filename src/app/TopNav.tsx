@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import { NavLink, useNavigate } from "react-router-dom";
-import { clearToken, getToken } from "../auth/session";
+import { NavLink } from "react-router-dom";
+import { getToken } from "../auth/session";
 import { useMe } from "../auth/useAuth";
 import Avatar from "../components/Avatar";
 import NotificationBell from "../components/NotificationBell";
 import { itemsFor, NavList } from "./Sidebar";
+import { useLogout } from "./useLogout";
 
 const MENU_PATH = {
   open: "M4 7h16M4 12h16M4 17h16",
@@ -14,20 +14,13 @@ const MENU_PATH = {
 
 /**
  * The top bar. It sits in the page flow, above the content: the NEU mark on the left, and on the right the
- * notifications, the account picture (which opens /account) and logout. On phones the menu button opens the nav links.
+ * notifications, the account picture (which opens /account) and a logout icon. On phones the menu button opens the nav links.
  */
 export default function TopNav() {
   const me = useMe();
-  const qc = useQueryClient();
-  const navigate = useNavigate();
+  const logout = useLogout();
   const [menuOpen, setMenuOpen] = useState(false);
   if (!getToken()) return null;
-
-  function logout() {
-    clearToken();
-    qc.clear();
-    navigate("/login", { replace: true });
-  }
 
   return (
     <>
@@ -60,12 +53,12 @@ export default function TopNav() {
             type="button"
             onClick={logout}
             aria-label="Log out"
-            className="flex h-10 items-center gap-2 rounded-xl px-2.5 text-sm text-ink-600 hover:bg-page hover:text-ink-900 sm:px-3"
+            title="Log out"
+            className="grid h-10 w-10 place-items-center rounded-xl text-ink-600 transition-colors hover:text-brand-600"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M9 21H5V3h4M16 17l5-5-5-5M21 12H9" />
             </svg>
-            <span className="hidden sm:inline">Logout</span>
           </button>
         </div>
       </header>

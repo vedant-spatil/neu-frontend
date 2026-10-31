@@ -113,8 +113,8 @@ export default function RecentProjects() {
                       </Link>
                     </td>
                     <td className="py-3">
-                      <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                        ready ? "bg-ok-50 text-ok-600" : "bg-line text-ink-600"
+                      <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${
+                        ready ? "text-ok-600" : "text-ink-600"
                       }`}>
                         <span className={`h-1.5 w-1.5 rounded-full ${ready ? "bg-ok-600" : "bg-ink-400"}`} />
                         {ready ? "Ready" : "No accounts"}

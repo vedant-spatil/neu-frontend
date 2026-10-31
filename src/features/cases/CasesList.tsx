@@ -209,7 +209,7 @@ export default function CasesList() {
                     )}
                     <td className="px-5 py-3 font-semibold text-ink-900">Case {c.id}</td>
                     <td className="px-5 py-3 text-ink-600">Alert {c.alert_id}</td>
-                    <td className="px-5 py-3"><StatusBadge status={c.status} /></td>
+                    <td className="px-5 py-3"><StatusBadge status={c.status} plain /></td>
                     <td className="px-5 py-3 font-semibold text-ink-900">{c.risk_score.toFixed(2)}</td>
                     <td className="px-5 py-3 text-right">
                       <span className="font-medium text-brand-600">Open</span>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import { api } from "../../api/client";
@@ -116,6 +117,11 @@ export default function ImportPage() {
     | undefined;
   const errors = validation?.errors ?? {};
 
+  // The report is written when a stage or a rule group finishes, so the age of the last write shows whether the sync
+  // is still moving.
+  const updatedAt = typeof report.updated_at === "string" ? Date.parse(report.updated_at) : NaN;
+  const quietSeconds = Number.isNaN(updatedAt) ? null : Math.max(0, Math.round((Date.now() - updatedAt) / 1000));
+
   // Step 0 upload, 1 map columns, 2 sync (once a sync has started).
   const step = imp.data ? 2 : columns.data ? 1 : 0;
 
@@ -123,7 +129,7 @@ export default function ImportPage() {
     <div className="space-y-6">
       <PageHeader title="Import transactions" />
 
-      {upload.isPending && (
+      {upload.isPending && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink-900/30 px-4">
           <div role="dialog" aria-modal="true" aria-labelledby="upload-title"
                className="w-full max-w-xs rounded-2xl bg-white p-6 text-center shadow-lg ring-1 ring-line">
@@ -137,7 +143,8 @@ export default function ImportPage() {
               {saving ? "Large files take a minute or two." : `${Math.round((sent ?? 0) * 100)}% sent`}
             </p>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
 
       <Stepper steps={["Upload", "Map columns", "Sync"]} current={step} />
@@ -184,8 +191,8 @@ export default function ImportPage() {
                   <tr key={f.field} className="border-b border-line last:border-0">
                     <td className="py-3 font-mono text-ink-900">{f.field}</td>
                     <td className="py-3">
-                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                        f.required ? "bg-brand-50 text-brand-600" : "bg-line text-ink-600"
+                      <span className={`text-xs font-medium ${
+                        f.required ? "text-brand-600" : "text-ink-600"
                       }`}>
                         {f.required ? "Required" : "Optional"}
                       </span>
@@ -222,7 +229,7 @@ export default function ImportPage() {
       {imp.data && (syncStarted === importId || busy) && (
         <Card
           title="3. Sync progress"
-          action={<StatusBadge status={imp.data.status} />}
+          action={<StatusBadge status={imp.data.status} plain />}
         >
           <div className="grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
             <Stat label="File" value={imp.data.filename} />
@@ -238,8 +245,14 @@ export default function ImportPage() {
           {busy && (
             <div className="mt-5 flex items-center gap-3">
               <RedRing fraction={null} small />
-              <span className="text-sm text-ink-600">Working on the file…</span>
-              <button disabled={reset.isPending} onClick={() => importId !== null && reset.mutate(importId)} className={buttonClass("secondary")}>
+              <span className="text-sm text-ink-600">
+                Working on the file{typeof report.stage === "string" ? `: ${report.stage}` : ""}
+                {quietSeconds !== null && ` · last update ${quietSeconds}s ago`}
+                {quietSeconds !== null && quietSeconds > 300 && (
+                  <span className="text-brand-600"> · no progress for 5 minutes; check the API logs or reset</span>
+                )}
+              </span>
+              <button disabled={reset.isPending} onClick={() => importId !== null && reset.mutate(importId)} className={`ml-auto ${buttonClass("secondary")}`}>
                 Reset stuck import
               </button>
               {reset.isError && <span className="text-sm text-brand-600">{(reset.error as Error).message}</span>}
@@ -318,8 +331,8 @@ function InfoIcon() {
 function Stat({ label, value }: { label: string; value: string | number }) {
   return (
     <div>
-      <div className="text-xs uppercase tracking-wide text-ink-400">{label}</div>
-      <div className="mt-1 break-all font-medium text-ink-900">{value}</div>
+      <div className="text-xs font-bold uppercase tracking-wide text-ink-600">{label}</div>
+      <div className="mt-1 break-all text-ink-900">{value}</div>
     </div>
   );
 }

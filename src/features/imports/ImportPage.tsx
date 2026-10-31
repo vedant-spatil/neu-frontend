@@ -117,6 +117,11 @@ export default function ImportPage() {
     | undefined;
   const errors = validation?.errors ?? {};
 
+  // The report is written when a stage or a rule group finishes, so the age of the last write shows whether the sync
+  // is still moving.
+  const updatedAt = typeof report.updated_at === "string" ? Date.parse(report.updated_at) : NaN;
+  const quietSeconds = Number.isNaN(updatedAt) ? null : Math.max(0, Math.round((Date.now() - updatedAt) / 1000));
+
   // Step 0 upload, 1 map columns, 2 sync (once a sync has started).
   const step = imp.data ? 2 : columns.data ? 1 : 0;
 
@@ -240,7 +245,13 @@ export default function ImportPage() {
           {busy && (
             <div className="mt-5 flex items-center gap-3">
               <RedRing fraction={null} small />
-              <span className="text-sm text-ink-600">Working on the file…</span>
+              <span className="text-sm text-ink-600">
+                Working on the file{typeof report.stage === "string" ? `: ${report.stage}` : ""}
+                {quietSeconds !== null && ` · last update ${quietSeconds}s ago`}
+                {quietSeconds !== null && quietSeconds > 300 && (
+                  <span className="text-brand-600"> · no progress for 5 minutes; check the API logs or reset</span>
+                )}
+              </span>
               <button disabled={reset.isPending} onClick={() => importId !== null && reset.mutate(importId)} className={`ml-auto ${buttonClass("secondary")}`}>
                 Reset stuck import
               </button>

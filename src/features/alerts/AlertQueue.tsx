@@ -4,7 +4,8 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { z } from "zod";
 import { api } from "../../api/client";
 import { AlertSchema, CaseSchema } from "../../api/schemas";
-import { buttonClass, Card, ErrorState, PageHeader, RuleBadge } from "../../components/ui";
+import { buttonClass, Card, ErrorState, PageHeader } from "../../components/ui";
+import { ruleLabel } from "../../lib/labels";
 
 const PageSchema = z.object({
   total: z.number(),
@@ -127,7 +128,11 @@ export default function AlertQueue() {
                     <td className="px-5 py-3 font-mono text-ink-900">{a.account_id}</td>
                     <td className="px-5 py-3 text-ink-900">{a.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                     <td className="px-5 py-3 text-ink-600">{a.ts.replace("T", " ").slice(0, 16)}</td>
-                    <td className="px-5 py-3">{a.rules.map((r) => <RuleBadge key={r} rule={r} />)}</td>
+                    <td className="px-5 py-3">
+                      {a.rules.map((r) => (
+                        <span key={r} className="mr-3 text-sm text-brand-600">{ruleLabel(r)}</span>
+                      ))}
+                    </td>
                     <td className="px-5 py-3 font-semibold text-ink-900">{a.risk_score.toFixed(2)}</td>
                     <td className="px-5 py-3 text-right text-sm font-medium text-brand-600">
                       {open.isPending && open.variables === a.id ? "Opening…" : "Open case"}

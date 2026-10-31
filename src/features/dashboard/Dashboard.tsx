@@ -143,7 +143,7 @@ export default function Dashboard() {
                     <th className="py-2 font-medium">Account</th>
                     <th className="py-2 font-medium">Case</th>
                     <th className="py-2 text-right font-medium">Alerts</th>
-                    <th className="py-2 pl-6 font-medium">Status</th>
+                    <th className="py-2 text-center font-medium">Status</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -172,7 +172,7 @@ export default function Dashboard() {
                         <td className="py-3 text-right">
                           <span className="font-semibold text-brand-600">{a.alerts}</span>
                         </td>
-                        <td className="py-3 pl-6">
+                        <td className="py-3 text-center">
                           {a.case_status !== null ? <StatusBadge status={a.case_status} plain /> : <span className="text-ink-400">—</span>}
                         </td>
                       </tr>

@@ -2,8 +2,6 @@ import type { ReactNode } from "react";
 import { NavLink } from "react-router-dom";
 import { getToken } from "../auth/session";
 import { useMe } from "../auth/useAuth";
-import Avatar from "../components/Avatar";
-import { useLogout } from "./useLogout";
 
 export type Item = { to: string; label: string; icon: ReactNode };
 
@@ -20,6 +18,7 @@ const ICONS = {
   import: icon("M12 3v12M7 8l5-5 5 5M4 17v3h16v-3"),
   projects: icon("M3 7h18v12H3zM3 7l3-4h5l2 2h8"),
   observability: icon("M3 17l6-6 4 4 8-8M14 7h7v7"),
+  person: icon("M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"),
 };
 
 /** The navigation items for a role. Admin sees the alert queue, import and observability; QA sees only their own cases and projects. */
@@ -73,21 +72,12 @@ export function NavList({ items, onNavigate, showLabels = false }: { items: Item
   );
 }
 
-function LogoutIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M9 21H5V3h4M16 17l5-5-5-5M21 12H9" />
-    </svg>
-  );
-}
-
 /**
  * The desktop navigation: a narrow rounded panel at the left edge, centred vertically, as tall as its contents. The
- * profile picture (links to the account page) and logout sit at the bottom. Phones use the menu in the top bar.
+ * account link (a person icon) sits at the bottom. Logout is in the top bar. Phones use the menu in the top bar.
  */
 export default function Sidebar() {
   const me = useMe();
-  const logout = useLogout();
   if (!getToken()) return null;
   return (
     <aside className="fixed left-4 top-1/2 z-20 hidden w-[72px] -translate-y-1/2 flex-col gap-1 rounded-3xl bg-white p-3 shadow-sm ring-1 ring-line md:flex">
@@ -97,19 +87,14 @@ export default function Sidebar() {
           to="/account"
           title="Your account"
           aria-label="Your account"
-          className="rounded-full ring-2 ring-transparent transition hover:ring-brand-500"
+          className={({ isActive }) =>
+            `grid h-11 w-11 place-items-center rounded-xl transition-colors ${
+              isActive ? "text-brand-600" : "text-ink-600 hover:text-brand-600"
+            }`
+          }
         >
-          <Avatar size={36} />
+          {ICONS.person}
         </NavLink>
-        <button
-          type="button"
-          onClick={logout}
-          title="Log out"
-          aria-label="Log out"
-          className="grid h-11 w-11 place-items-center rounded-xl text-ink-600 transition-colors hover:text-brand-600"
-        >
-          <LogoutIcon />
-        </button>
       </div>
     </aside>
   );

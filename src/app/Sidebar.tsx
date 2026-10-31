@@ -17,6 +17,7 @@ const ICONS = {
   cases: icon("M4 4h16v16H4zM8 9h8M8 13h8M8 17h5"),
   import: icon("M12 3v12M7 8l5-5 5 5M4 17v3h16v-3"),
   projects: icon("M3 7h18v12H3zM3 7l3-4h5l2 2h8"),
+  observability: icon("M3 17l6-6 4 4 8-8M14 7h7v7"),
 };
 
 /** The navigation items for a role. Admin sees the alert queue and import; QA sees only their own cases and projects. */
@@ -30,6 +31,7 @@ export function itemsFor(role: string | undefined): Item[] {
     label: role === "qa" ? "My projects" : "Projects",
     icon: ICONS.projects,
   });
+  if (role === "admin") items.push({ to: "/admin/observability", label: "Observability", icon: ICONS.observability });
   return items;
 }
 

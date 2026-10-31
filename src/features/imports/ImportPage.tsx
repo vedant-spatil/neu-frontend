@@ -186,8 +186,8 @@ export default function ImportPage() {
                   <tr key={f.field} className="border-b border-line last:border-0">
                     <td className="py-3 font-mono text-ink-900">{f.field}</td>
                     <td className="py-3">
-                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                        f.required ? "bg-brand-50 text-brand-600" : "bg-line text-ink-600"
+                      <span className={`text-xs font-medium ${
+                        f.required ? "text-brand-600" : "text-ink-600"
                       }`}>
                         {f.required ? "Required" : "Optional"}
                       </span>
@@ -224,7 +224,7 @@ export default function ImportPage() {
       {imp.data && (syncStarted === importId || busy) && (
         <Card
           title="3. Sync progress"
-          action={<StatusBadge status={imp.data.status} />}
+          action={<StatusBadge status={imp.data.status} plain />}
         >
           <div className="grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
             <Stat label="File" value={imp.data.filename} />
@@ -241,7 +241,7 @@ export default function ImportPage() {
             <div className="mt-5 flex items-center gap-3">
               <RedRing fraction={null} small />
               <span className="text-sm text-ink-600">Working on the file…</span>
-              <button disabled={reset.isPending} onClick={() => importId !== null && reset.mutate(importId)} className={buttonClass("secondary")}>
+              <button disabled={reset.isPending} onClick={() => importId !== null && reset.mutate(importId)} className={`ml-auto ${buttonClass("secondary")}`}>
                 Reset stuck import
               </button>
               {reset.isError && <span className="text-sm text-brand-600">{(reset.error as Error).message}</span>}
@@ -320,8 +320,8 @@ function InfoIcon() {
 function Stat({ label, value }: { label: string; value: string | number }) {
   return (
     <div>
-      <div className="text-xs uppercase tracking-wide text-ink-400">{label}</div>
-      <div className="mt-1 break-all font-medium text-ink-900">{value}</div>
+      <div className="text-xs font-bold uppercase tracking-wide text-ink-600">{label}</div>
+      <div className="mt-1 break-all text-ink-900">{value}</div>
     </div>
   );
 }

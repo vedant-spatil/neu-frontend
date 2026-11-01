@@ -94,19 +94,13 @@ const STATUS_HINT: Record<string, string> = {
  * Status label for a case or import. By default a coloured pill; `plain` shows only the coloured text, for tables
  * where the colour alone carries the status. Unknown statuses get neutral text.
  */
-export function StatusBadge({ status, plain = false }: { status: string; plain?: boolean }) {
-  const tone = STATUS_TONE[status] ?? "bg-line text-ink-600";
+export function StatusBadge({ status }: { status: string; plain?: boolean }) {
+  // Coloured text only, with no background. The `plain` prop is still accepted by older callers and ignored.
+  const tone = STATUS_TONE[status] ?? "text-ink-600";
+  const text = tone.split(" ").find((c) => c.startsWith("text-")) ?? "text-ink-600";
   const label = STATUS_LABEL[status] ?? status.replace(/_/g, " ");
-  if (plain) {
-    const text = tone.split(" ").find((c) => c.startsWith("text-")) ?? "text-ink-600";
-    return (
-      <span title={STATUS_HINT[status]} className={`text-xs font-medium ${text}`}>
-        {label}
-      </span>
-    );
-  }
   return (
-    <span title={STATUS_HINT[status]} className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${tone}`}>
+    <span title={STATUS_HINT[status]} className={`text-xs font-medium ${text}`}>
       {label}
     </span>
   );
@@ -114,7 +108,7 @@ export function StatusBadge({ status, plain = false }: { status: string; plain?:
 
 /** Small rule badge, for example R3 fan in. */
 export function RuleBadge({ rule }: { rule: string }) {
-  return <span className="mr-1 inline-flex rounded bg-brand-50 px-1.5 py-0.5 font-mono text-xs text-brand-600">{rule}</span>;
+  return <span className="mr-3 text-xs font-medium text-brand-600">{rule}</span>;
 }
 
 export function PageHeader({ title, subtitle, actions }: { title: ReactNode; subtitle?: ReactNode; actions?: ReactNode }) {

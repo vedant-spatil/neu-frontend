@@ -1,12 +1,14 @@
 import type { SarBody } from "../features/approvals/sarPrefill";
 import { Card } from "./ui";
 
-type Props = { version: number; body: SarBody };
+type Props = { version: number; body: SarBody; identities?: Record<string, string> };
 
 const formatTime = (iso?: string) => (iso ? iso.replace("T", " ").slice(0, 16) : "—");
 
 /** The SAR draft as readable sections. The raw JSON stays behind a disclosure for auditors. */
-export default function SarView({ version, body }: Props) {
+export default function SarView({ version, body, identities = {} }: Props) {
+  // The LLM writes tokens (PARTY_001). The investigator sees names, looked up from the case's encrypted map.
+  const named = (text: string) => text.replace(/PARTY_\d{3}/g, (t) => identities[t] ?? t);
   const activity = body.activity;
   const cited = body.cited_txn_ids ?? [];
   return (
@@ -14,7 +16,7 @@ export default function SarView({ version, body }: Props) {
       title={
         <span className="flex items-center gap-2">
           SAR draft
-          <span className="rounded-full bg-warn-50 px-2 py-0.5 text-xs font-medium text-warn-600">
+          <span className="text-xs font-medium text-warn-600">
             Redacted draft · v{version}
           </span>
         </span>
@@ -23,7 +25,7 @@ export default function SarView({ version, body }: Props) {
       <div className="space-y-5 text-sm text-ink-900">
         <div>
           <div className="text-xs uppercase tracking-wide text-ink-400">Subject</div>
-          <div className="mt-1 font-medium">Party {body.subject?.party_token ?? "—"}</div>
+          <div className="mt-1 font-medium">{body.subject?.party_token ? named(body.subject.party_token) : "—"}</div>
         </div>
 
         <dl className="grid gap-4 sm:grid-cols-3">
@@ -49,7 +51,7 @@ export default function SarView({ version, body }: Props) {
 
         <div>
           <div className="text-xs uppercase tracking-wide text-ink-400">Narrative</div>
-          <p className="mt-1 whitespace-pre-line leading-relaxed text-ink-900">{body.narrative ?? "No narrative."}</p>
+          <p className="mt-1 whitespace-pre-line leading-relaxed text-ink-900">{body.narrative ? named(body.narrative) : "No narrative."}</p>
         </div>
 
         <div>

@@ -92,7 +92,7 @@ export default function AccountPage() {
             <div>
               <dt className="text-xs uppercase tracking-wide text-ink-400">Role</dt>
               <dd className="mt-1">
-                <span className="rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-semibold uppercase text-brand-600">
+                <span className="text-xs font-semibold uppercase text-brand-600">
                   {me.data?.role ?? "—"}
                 </span>
               </dd>

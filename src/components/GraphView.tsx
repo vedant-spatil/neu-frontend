@@ -1,7 +1,11 @@
 import { useEffect, useRef } from "react";
 import cytoscape, { Core, ElementDefinition } from "cytoscape";
+import { buttonClass } from "./ui";
 
-/** Cytoscape core wrapped directly (plan 16.9). No react-cytoscapejs dependency. */
+/**
+ * Cytoscape core wrapped directly (plan 16.9). The flagged account is the node with `focus` set. Recenter fits the view
+ * around it again, after the user has panned or zoomed away.
+ */
 export default function GraphView({ elements }: { elements: ElementDefinition[] }) {
   const ref = useRef<HTMLDivElement>(null);
   const cyRef = useRef<Core | null>(null);
@@ -29,5 +33,21 @@ export default function GraphView({ elements }: { elements: ElementDefinition[] 
     };
   }, [elements]);
 
-  return <div ref={ref} className="h-[28rem] w-full rounded-2xl bg-white ring-1 ring-line" />;
+  function recenter() {
+    const cy = cyRef.current;
+    if (!cy) return;
+    const focus = cy.nodes("[?focus]");
+    cy.fit(focus.nonempty() ? focus : cy.elements(), 60);
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex justify-end">
+        <button type="button" onClick={recenter} className={buttonClass("secondary")}>
+          Recenter
+        </button>
+      </div>
+      <div ref={ref} className="h-[28rem] w-full rounded-2xl bg-white ring-1 ring-line" />
+    </div>
+  );
 }

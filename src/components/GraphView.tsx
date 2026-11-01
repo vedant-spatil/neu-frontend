@@ -33,11 +33,14 @@ export default function GraphView({ elements }: { elements: ElementDefinition[] 
     };
   }, [elements]);
 
+  // Fits the whole network at its normal zoom, then centres the flagged account. Fitting the focused node alone zoomed
+  // in too far.
   function recenter() {
     const cy = cyRef.current;
     if (!cy) return;
+    cy.fit(cy.elements(), 60);
     const focus = cy.nodes("[?focus]");
-    cy.fit(focus.nonempty() ? focus : cy.elements(), 60);
+    if (focus.nonempty()) cy.center(focus);
   }
 
   return (

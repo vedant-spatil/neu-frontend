@@ -15,6 +15,8 @@ const PageSchema = z.object({
 });
 
 const PAGE_SIZE = 25;
+// Mirrors TRIAGE_THRESHOLD in the API settings (backend app/config.py). Alerts below it are hidden unless "All alerts" is chosen.
+const TRIAGE_THRESHOLD = 0.6;
 const SORTS: [string, string][] = [
   ["score_desc", "Score, highest first"],
   ["score_asc", "Score, lowest first"],
@@ -40,17 +42,19 @@ export default function AlertQueue() {
   const [searchParams] = useSearchParams();
   const [account, setAccount] = useState(searchParams.get("account") ?? "");
   const [sort, setSort] = useState("score_desc");
+  const [scope, setScope] = useState<"above" | "all">("above");
 
   const query = new URLSearchParams({
     offset: String(page * PAGE_SIZE),
     limit: String(PAGE_SIZE),
     sort,
+    ...(scope === "above" ? { min_score: String(TRIAGE_THRESHOLD) } : {}),
     ...(rule ? { rule } : {}),
     ...(account.trim() ? { account: account.trim() } : {}),
   }).toString();
 
   const alerts = useQuery({
-    queryKey: ["alerts", page, rule, account.trim(), sort],
+    queryKey: ["alerts", page, rule, account.trim(), sort, scope],
     queryFn: async () => PageSchema.parse(await api<unknown>(`/api/alerts?${query}`)),
     placeholderData: keepPreviousData,
   });
@@ -76,6 +80,17 @@ export default function AlertQueue() {
               onChange={(e) => { setAccount(e.target.value); setPage(0); }}
               className="w-56 rounded-lg bg-white px-3 py-2 font-mono text-sm text-ink-900 ring-1 ring-line outline-none focus:ring-2 focus:ring-brand-500"
             />
+            <label className="flex items-center gap-2 text-sm text-ink-600">
+              Show
+              <select
+                className="rounded-lg bg-white px-3 py-2 text-ink-900 ring-1 ring-line"
+                value={scope}
+                onChange={(e) => { setScope(e.target.value as "above" | "all"); setPage(0); }}
+              >
+                <option value="above">Above triage ({TRIAGE_THRESHOLD})</option>
+                <option value="all">All alerts</option>
+              </select>
+            </label>
             <label className="flex items-center gap-2 text-sm text-ink-600">
               Rule
               <select

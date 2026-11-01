@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { z } from "zod";
@@ -9,7 +9,11 @@ import { buttonClass, Card, ErrorState, PageHeader, StatusBadge } from "../../co
 import { validProjectName } from "../projects/helpers";
 import { useDebounced } from "../../lib/useDebounced";
 
-const STATUS_NAMES: Record<string, string> = { open: "Running", awaiting_review: "Awaiting review" };
+const STATUS_NAMES: Record<string, string> = {
+  pending: "Not started",
+  open: "Running",
+  awaiting_review: "Awaiting review",
+};
 
 const PageSchema = z.object({
   total: z.number(),
@@ -25,17 +29,26 @@ const AddResultSchema = z.object({
   missing_case_ids: z.array(z.number()),
 });
 
-const BuildSchema = z.object({
-  created: z.number(),
-  added: z.number(),
-  merged: z.number(),
-  deferred: z.number(),
-  unchanged: z.number(),
+const BuildStatusSchema = z.object({
+  running: z.boolean(),
+  done: z.number(),
+  total: z.number(),
+  summary: z.object({
+    created: z.number(),
+    added: z.number(),
+    merged: z.number(),
+    deferred: z.number(),
+    unchanged: z.number(),
+  }).nullable(),
+  error: z.string().nullable(),
+});
+const RunResultSchema = z.object({
   queued: z.number(),
+  skipped: z.array(z.object({ case_id: z.number(), reason: z.string() })),
 });
 
 const PAGE_SIZE = 25;
-const STATUSES = ["open", "awaiting_review", "approved", "closed", "failed", "superseded"];
+const STATUSES = ["pending", "open", "awaiting_review", "approved", "closed", "failed", "superseded"];
 
 export default function CasesList() {
   const me = useMe();
@@ -97,22 +110,59 @@ export default function CasesList() {
     },
   });
 
-  const build = useMutation({
-    mutationFn: async () => BuildSchema.parse(await api<unknown>("/api/cases/build", { method: "POST" })),
-    onSuccess: (r) => {
-      setResult(
-        `Built cases: ${r.created} new, ${r.added} updated, ${r.merged} merged, ${r.unchanged} unchanged` +
-        (r.deferred ? `, ${r.deferred} waiting for a running case` : "") +
-        (r.queued ? `, ${r.queued} queued for the next build` : "") + ".",
-      );
+  // The build runs on the server. This query polls its progress while it runs, and reports the result when it ends.
+  const buildStatus = useQuery({
+    queryKey: ["cases-build-status"],
+    enabled: isAdmin,
+    queryFn: async () => BuildStatusSchema.parse(await api<unknown>("/api/cases/build/status")),
+    refetchInterval: (q) => (q.state.data?.running ? 1000 : false),
+  });
+  const buildRunning = buildStatus.data?.running ?? false;
+  const wasRunning = useRef(false);
+  useEffect(() => {
+    if (wasRunning.current && !buildRunning) {
+      const s = buildStatus.data;
+      if (s?.error) setResult(`Case build failed: ${s.error}`);
+      else if (s?.summary) {
+        setResult(
+          `Built cases: ${s.summary.created} new, ${s.summary.added} updated, ${s.summary.merged} merged, ` +
+          `${s.summary.unchanged} unchanged` +
+          (s.summary.deferred ? `, ${s.summary.deferred} waiting for a running case` : "") + ".",
+        );
+      }
       qc.invalidateQueries({ queryKey: ["cases"] });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
+    }
+    wasRunning.current = buildRunning;
+  }, [buildRunning, buildStatus.data, qc]);
+
+  const build = useMutation({
+    mutationFn: async () => { await api<unknown>("/api/cases/build", { method: "POST" }); },
+    onSuccess: () => {
+      setResult(null);
+      qc.invalidateQueries({ queryKey: ["cases-build-status"] });
     },
     onError: (e) => {
       setResult(e instanceof ApiError && e.status === 409
-        ? "A case build is already running. Try again when it finishes."
-        : "Could not build cases.");
+        ? "A case build is already running."
+        : "Could not start the case build.");
     },
+  });
+
+  const runSelected = useMutation({
+    mutationFn: async () => RunResultSchema.parse(await api<unknown>("/api/cases/run", {
+      method: "POST",
+      body: JSON.stringify({ case_ids: [...selected] }),
+    })),
+    onSuccess: (r) => {
+      const skipped = r.skipped.length;
+      setResult(`Started ${r.queued} audit timeline${r.queued === 1 ? "" : "s"}.` +
+        (skipped ? ` ${skipped} skipped (not waiting to start).` : ""));
+      setSelected(new Set());
+      qc.invalidateQueries({ queryKey: ["cases"] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+    onError: () => setResult("Could not start the audit timelines."),
   });
 
   const totalPages = cases.data ? Math.max(1, Math.ceil(cases.data.total / PAGE_SIZE)) : 1;
@@ -145,9 +195,9 @@ export default function CasesList() {
         actions={
           <div className="flex flex-wrap items-center gap-3">
             {isAdmin && (
-              <button className={buttonClass("secondary")} disabled={build.isPending}
+              <button className={buttonClass("secondary")} disabled={build.isPending || buildRunning}
                       onClick={() => build.mutate()}>
-                {build.isPending ? "Building…" : "Build cases"}
+                {build.isPending || buildRunning ? "Building…" : "Build cases"}
               </button>
             )}
             <input
@@ -178,6 +228,31 @@ export default function CasesList() {
         }
       />
 
+      {buildRunning && (
+        <Card>
+          <div role="progressbar" aria-label="Case build progress" aria-valuemin={0} aria-valuemax={buildStatus.data?.total ?? 0}
+               aria-valuenow={buildStatus.data?.done ?? 0} className="space-y-2 text-sm">
+            <div className="flex items-center justify-between text-ink-600">
+              <span>Building cases…</span>
+              <span>
+                {buildStatus.data && buildStatus.data.total > 0
+                  ? `${buildStatus.data.done} of ${buildStatus.data.total} account groups`
+                  : "Reading alerts…"}
+              </span>
+            </div>
+            <div className="h-2 w-full overflow-hidden rounded-full bg-line">
+              <div
+                className="h-full rounded-full bg-brand-600 transition-all"
+                style={{
+                  width: buildStatus.data && buildStatus.data.total > 0
+                    ? `${Math.round((buildStatus.data.done / buildStatus.data.total) * 100)}%`
+                    : "5%",
+                }}
+              />
+            </div>
+          </div>
+        </Card>
+      )}
       {result && (
         <div className="rounded-xl bg-ok-50 px-4 py-3 text-sm text-ok-600" role="status">{result}</div>
       )}
@@ -189,6 +264,10 @@ export default function CasesList() {
           <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
             <span className="font-medium text-ink-900">{selected.size} case{selected.size === 1 ? "" : "s"} selected</span>
             <div className="flex gap-2">
+              <button className={buttonClass()} disabled={runSelected.isPending}
+                      onClick={() => runSelected.mutate()}>
+                {runSelected.isPending ? "Starting…" : "Run audit timeline"}
+              </button>
               <button className={buttonClass("secondary")} onClick={() => setSelected(new Set())}>Clear</button>
               <button className={buttonClass()} onClick={() => setPanelOpen((open) => !open)}>Add to project</button>
             </div>

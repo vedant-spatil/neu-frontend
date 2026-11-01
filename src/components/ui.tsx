@@ -66,6 +66,7 @@ export function StatCard({
 }
 
 const STATUS_TONE: Record<string, string> = {
+  pending: "bg-line text-ink-600",
   open: "bg-info-50 text-info-600",
   awaiting_review: "bg-warn-50 text-warn-600",
   approved: "bg-ok-50 text-ok-600",
@@ -81,11 +82,13 @@ const STATUS_TONE: Record<string, string> = {
 
 // Shown labels. The stored status values don't change. "open" means the workflow is still running.
 const STATUS_LABEL: Record<string, string> = {
+  pending: "Not started",
   open: "Running",
   awaiting_review: "Awaiting review",
 };
 
 const STATUS_HINT: Record<string, string> = {
+  pending: "Built from the alerts but no audit timeline has run yet. Select it in the cases list and run its audit timeline.",
   open: "The workflow is still running: triage, flow tracer, screening, typology and the SAR draft.",
   awaiting_review: "The workflow has finished. An investigator must approve or close the case.",
 };

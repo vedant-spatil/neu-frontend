@@ -28,7 +28,7 @@ export default function AuditTimeline({ caseId, polling, onRerun, canRerun = fal
     <button
       type="button"
       disabled={!canRerun || rerunning}
-      title={canRerun ? undefined : "Only failed cases can be restarted"}
+      title={canRerun ? undefined : "Only failed cases or cases awaiting review can be restarted"}
       onClick={() => {
         if (window.confirm("Restart the investigation for this case? The earlier events are kept.")) onRerun();
       }}

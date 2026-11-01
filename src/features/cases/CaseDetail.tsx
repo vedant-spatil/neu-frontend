@@ -37,6 +37,12 @@ export default function CaseDetail() {
     queryFn: async () => SarSchema.parse(await api<unknown>(`/api/cases/${id}/sar`)),
     retry: false,
   });
+  const identitiesQ = useQuery({
+    queryKey: ["identities", id],
+    enabled: sarQ.data !== undefined,
+    queryFn: async () => z.record(z.string()).parse(await api<unknown>(`/api/cases/${id}/identities`)),
+    retry: false,
+  });
   const qaUsers = useQuery({
     queryKey: ["users", "qa"],
     enabled: isAdmin,
@@ -117,21 +123,22 @@ export default function CaseDetail() {
         </Card>
       )}
 
-      <div className="grid gap-6 xl:grid-cols-3">
+      <div className="grid items-start gap-6 xl:grid-cols-3">
         <Card id="transaction-graph" title="Transaction graph" className="xl:col-span-2">
           <GraphView elements={elements as never} />
         </Card>
         <AuditTimeline
           caseId={id}
           polling={status === "open"}
-          onRerun={status === "failed" ? () => rerun.mutate() : undefined}
+          onRerun={() => rerun.mutate()}
+          canRerun={status === "failed"}
           rerunning={rerun.isPending}
         />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
         {sarQ.data ? (
-          <SarView version={sarQ.data.version} body={sarQ.data.body as SarBody} />
+          <SarView version={sarQ.data.version} body={sarQ.data.body as SarBody} identities={identitiesQ.data} />
         ) : (
           <Card title="SAR draft">
             <p className="text-sm text-ink-400">

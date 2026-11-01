@@ -13,12 +13,17 @@ export default function DecisionForm({ caseId, sar }: { caseId: number; sar?: Sa
 
   // Choosing "Approve SAR" fills the typology and reason from the draft, but only where they are still empty.
   // The review tick is never set here: it records a human review.
+  // Choosing "Close" clears the form, so text prefilled for an approval is not sent with a close.
   function chooseAction(next: "approve" | "close") {
     setAction(next);
     if (next === "approve") {
       const filled = approvalPrefill(sar, { typologies, reason });
       setTypologies(filled.typologies);
       setReason(filled.reason);
+    } else {
+      setTypologies([]);
+      setReason("");
+      setReviewed(false);
     }
   }
 

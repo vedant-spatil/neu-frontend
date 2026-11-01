@@ -8,13 +8,14 @@ const EventSchema = z.object({ node: z.string(), kind: z.string(), payload: z.re
 type Props = {
   caseId: number;
   polling: boolean;
-  /** Set only for failed cases. The button shows when this is passed. */
+  /** The button is always shown. It is enabled only when canRerun is set (failed cases). */
   onRerun?: () => void;
+  canRerun?: boolean;
   rerunning?: boolean;
 };
 
 // Append-only case_events for one case. Polls while the case is still running.
-export default function AuditTimeline({ caseId, polling, onRerun, rerunning = false }: Props) {
+export default function AuditTimeline({ caseId, polling, onRerun, canRerun = false, rerunning = false }: Props) {
   const eventsQ = useQuery({
     queryKey: ["events", caseId],
     queryFn: async () => z.array(EventSchema).parse(await api<unknown>(`/api/cases/${caseId}/events`)),
@@ -26,13 +27,14 @@ export default function AuditTimeline({ caseId, polling, onRerun, rerunning = fa
   const action = onRerun ? (
     <button
       type="button"
-      disabled={rerunning}
+      disabled={!canRerun || rerunning}
+      title={canRerun ? undefined : "Only failed cases can be restarted"}
       onClick={() => {
-        if (window.confirm("Rerun the investigation for this case? The earlier events are kept.")) onRerun();
+        if (window.confirm("Restart the investigation for this case? The earlier events are kept.")) onRerun();
       }}
       className={buttonClass("secondary")}
     >
-      Rerun investigation
+      Restart investigation
     </button>
   ) : undefined;
 

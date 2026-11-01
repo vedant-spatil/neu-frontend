@@ -77,21 +77,27 @@ export default function Dashboard() {
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Link to="/cases?status=open" className="block rounded-2xl transition hover:ring-2 hover:ring-brand-500">
         <StatCard
           label="Open cases"
           value={openCases}
           trend={{ text: `${opened30} opened in 30 days`, tone: "neutral" }}
         />
+        </Link>
+        <Link to="/cases?status=awaiting_review" className="block rounded-2xl transition hover:ring-2 hover:ring-brand-500">
         <StatCard
           label="Awaiting review"
           value={awaiting}
           trend={{ text: awaiting > 0 ? "needs a decision" : "queue clear", tone: awaiting > 0 ? "down" : "up" }}
         />
+        </Link>
+        <Link to="/cases?status=failed" className="block rounded-2xl transition hover:ring-2 hover:ring-brand-500">
         <StatCard
           label="Failed cases"
           value={d.failed_cases}
           trend={{ text: d.failed_cases > 0 ? "check the audit log" : "no failures", tone: d.failed_cases > 0 ? "down" : "up" }}
         />
+        </Link>
         <StatCard
           label="Decisions"
           value={decisions}

@@ -6,6 +6,7 @@ import { api } from "../../api/client";
 import { AlertSchema, CaseSchema } from "../../api/schemas";
 import { buttonClass, Card, ErrorState, PageHeader } from "../../components/ui";
 import { ruleLabel } from "../../lib/labels";
+import { useDebounced } from "../../lib/useDebounced";
 
 const PageSchema = z.object({
   total: z.number(),
@@ -41,6 +42,7 @@ export default function AlertQueue() {
   const [rule, setRule] = useState("");
   const [searchParams] = useSearchParams();
   const [account, setAccount] = useState(searchParams.get("account") ?? "");
+  const accountQuery = useDebounced(account.trim());
   const [sort, setSort] = useState("score_desc");
   const [scope, setScope] = useState<"above" | "all">("above");
 
@@ -50,11 +52,11 @@ export default function AlertQueue() {
     sort,
     ...(scope === "above" ? { min_score: String(TRIAGE_THRESHOLD) } : {}),
     ...(rule ? { rule } : {}),
-    ...(account.trim() ? { account: account.trim() } : {}),
+    ...(accountQuery ? { account: accountQuery } : {}),
   }).toString();
 
   const alerts = useQuery({
-    queryKey: ["alerts", page, rule, account.trim(), sort, scope],
+    queryKey: ["alerts", page, rule, accountQuery, sort, scope],
     queryFn: async () => PageSchema.parse(await api<unknown>(`/api/alerts?${query}`)),
     placeholderData: keepPreviousData,
   });

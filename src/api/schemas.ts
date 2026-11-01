@@ -16,6 +16,7 @@ export const CaseSchema = z.object({
   status: z.string(),
   risk_score: z.number(),
   assignee_id: z.number().nullable().optional(),
+  members_changed: z.boolean().optional(),
 });
 export type Case = z.infer<typeof CaseSchema>;
 

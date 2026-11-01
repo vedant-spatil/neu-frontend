@@ -2,7 +2,7 @@ import { useState } from "react";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { z } from "zod";
-import { api } from "../../api/client";
+import { api, ApiError } from "../../api/client";
 import { CaseSchema, ProjectSummarySchema } from "../../api/schemas";
 import { useMe } from "../../auth/useAuth";
 import { buttonClass, Card, ErrorState, PageHeader, StatusBadge } from "../../components/ui";
@@ -23,6 +23,15 @@ const AddResultSchema = z.object({
   added: z.array(z.string()),
   already_present: z.array(z.string()),
   missing_case_ids: z.array(z.number()),
+});
+
+const BuildSchema = z.object({
+  created: z.number(),
+  added: z.number(),
+  merged: z.number(),
+  deferred: z.number(),
+  unchanged: z.number(),
+  queued: z.number(),
 });
 
 const PAGE_SIZE = 25;
@@ -88,6 +97,24 @@ export default function CasesList() {
     },
   });
 
+  const build = useMutation({
+    mutationFn: async () => BuildSchema.parse(await api<unknown>("/api/cases/build", { method: "POST" })),
+    onSuccess: (r) => {
+      setResult(
+        `Built cases: ${r.created} new, ${r.added} updated, ${r.merged} merged, ${r.unchanged} unchanged` +
+        (r.deferred ? `, ${r.deferred} waiting for a running case` : "") +
+        (r.queued ? `, ${r.queued} queued for the next build` : "") + ".",
+      );
+      qc.invalidateQueries({ queryKey: ["cases"] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+    onError: (e) => {
+      setResult(e instanceof ApiError && e.status === 409
+        ? "A case build is already running. Try again when it finishes."
+        : "Could not build cases.");
+    },
+  });
+
   const totalPages = cases.data ? Math.max(1, Math.ceil(cases.data.total / PAGE_SIZE)) : 1;
   const pageIds = cases.data?.items.map((c) => c.id) ?? [];
   const allOnPage = pageIds.length > 0 && pageIds.every((id) => selected.has(id));
@@ -117,6 +144,12 @@ export default function CasesList() {
         title={`Cases (${cases.data?.total ?? 0})`}
         actions={
           <div className="flex flex-wrap items-center gap-3">
+            {isAdmin && (
+              <button className={buttonClass("secondary")} disabled={build.isPending}
+                      onClick={() => build.mutate()}>
+                {build.isPending ? "Building…" : "Build cases"}
+              </button>
+            )}
             <input
               type="search"
               aria-label="Search cases"

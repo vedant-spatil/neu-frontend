@@ -86,6 +86,9 @@ export default function CaseDetail() {
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-2xl font-semibold text-ink-900">Case {caseQ.data.id}</h1>
             <StatusBadge status={status} />
+            {status === "failed" && caseQ.data.members_changed && (
+              <span className="text-sm font-medium text-warn-600">Updated: rerun needed</span>
+            )}
             {caseQ.data.assignee_id != null && (
               <span className="text-sm text-ink-600">
                 Assigned to {isAdmin ? assigneeEmail ?? `user ${caseQ.data.assignee_id}` : "you"}

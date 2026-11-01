@@ -6,6 +6,7 @@ import { api } from "../../api/client";
 import { ProjectSummarySchema } from "../../api/schemas";
 import { useMe } from "../../auth/useAuth";
 import { Card, EmptyState, ErrorState } from "../../components/ui";
+import { useDebounced } from "../../lib/useDebounced";
 
 const ProjectListSchema = z.array(ProjectSummarySchema);
 const ROW_LIMIT = 8;
@@ -28,6 +29,7 @@ export default function RecentProjects() {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
+  const debouncedQuery = useDebounced(query);
   const projects = useQuery({
     queryKey: ["projects"],
     queryFn: async () => ProjectListSchema.parse(await api<unknown>("/api/projects")),
@@ -35,14 +37,14 @@ export default function RecentProjects() {
 
   const base = me.data?.role === "qa" ? "/qa/projects" : "/admin/projects";
   const rows = useMemo(() => {
-    const needle = query.trim().toLowerCase();
+    const needle = debouncedQuery.trim().toLowerCase();
     return (projects.data ?? []).filter((p) => {
       const ready = (p.accounts ?? 0) > 0;
       if (filter === "ready" && !ready) return false;
       if (filter === "empty" && ready) return false;
       return p.name.toLowerCase().includes(needle);
     });
-  }, [projects.data, filter, query]);
+  }, [projects.data, filter, debouncedQuery]);
 
   return (
     <Card

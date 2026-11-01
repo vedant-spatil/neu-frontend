@@ -131,7 +131,7 @@ export default function CaseDetail() {
           caseId={id}
           polling={status === "open"}
           onRerun={() => rerun.mutate()}
-          canRerun={status === "failed"}
+          canRerun={status === "failed" || status === "awaiting_review"}
           rerunning={rerun.isPending}
         />
       </div>

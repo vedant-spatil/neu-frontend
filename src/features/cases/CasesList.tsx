@@ -1,12 +1,15 @@
 import { useState } from "react";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { z } from "zod";
 import { api } from "../../api/client";
 import { CaseSchema, ProjectSummarySchema } from "../../api/schemas";
 import { useMe } from "../../auth/useAuth";
 import { buttonClass, Card, ErrorState, PageHeader, StatusBadge } from "../../components/ui";
 import { validProjectName } from "../projects/helpers";
+import { useDebounced } from "../../lib/useDebounced";
+
+const STATUS_NAMES: Record<string, string> = { open: "Running", awaiting_review: "Awaiting review" };
 
 const PageSchema = z.object({
   total: z.number(),
@@ -32,7 +35,10 @@ export default function CasesList() {
   const isAdmin = me.data?.role === "admin";
 
   const [page, setPage] = useState(0);
-  const [status, setStatus] = useState("");
+  const [searchParams] = useSearchParams();
+  const [status, setStatus] = useState(searchParams.get("status") ?? "");
+  const [search, setSearch] = useState("");
+  const searchQuery = useDebounced(search.trim());
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [panelOpen, setPanelOpen] = useState(false);
   const [projectChoice, setProjectChoice] = useState<string>("new");
@@ -43,10 +49,11 @@ export default function CasesList() {
     offset: String(page * PAGE_SIZE),
     limit: String(PAGE_SIZE),
     ...(status ? { status } : {}),
+    ...(searchQuery ? { q: searchQuery } : {}),
   }).toString();
 
   const cases = useQuery({
-    queryKey: ["cases", page, status],
+    queryKey: ["cases", page, status, searchQuery],
     queryFn: async () => PageSchema.parse(await api<unknown>(`/api/cases?${query}`)),
     placeholderData: keepPreviousData,
   });
@@ -109,17 +116,32 @@ export default function CasesList() {
       <PageHeader
         title={`Cases (${cases.data?.total ?? 0})`}
         actions={
-          <label className="flex items-center gap-2 text-sm text-ink-600">
-            Status
-            <select
-              className="rounded-lg bg-white px-3 py-2 text-ink-900 ring-1 ring-line"
-              value={status}
-              onChange={(e) => { setStatus(e.target.value); setPage(0); setSelected(new Set()); }}
-            >
-              <option value="">All</option>
-              {STATUSES.map((s) => <option key={s} value={s}>{s.replace(/_/g, " ")}</option>)}
-            </select>
-          </label>
+          <div className="flex flex-wrap items-center gap-3">
+            <input
+              type="search"
+              aria-label="Search cases"
+              placeholder="Search case or alert number…"
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(0); setSelected(new Set()); }}
+              className="w-64 rounded-lg bg-white px-3 py-2 text-sm text-ink-900 ring-1 ring-line outline-none focus:ring-2 focus:ring-brand-500"
+            />
+            <div className="relative">
+              <select
+                aria-label="Status"
+                value={status}
+                onChange={(e) => { setStatus(e.target.value); setPage(0); setSelected(new Set()); }}
+                className="appearance-none rounded-lg bg-white py-2 pl-3 pr-9 text-sm text-ink-900 ring-1 ring-line outline-none focus:ring-2 focus:ring-brand-500"
+              >
+                <option value="">All statuses</option>
+                {STATUSES.map((s) => <option key={s} value={s}>{STATUS_NAMES[s] ?? s.replace(/_/g, " ")}</option>)}
+              </select>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                   strokeLinecap="round" strokeLinejoin="round" aria-hidden
+                   className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-ink-400">
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </div>
+          </div>
         }
       />
 

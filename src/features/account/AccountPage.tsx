@@ -85,13 +85,13 @@ export default function AccountPage() {
           <dl className="grid gap-4 text-sm">
             <div>
               <dt className="text-xs uppercase tracking-wide text-ink-400">Username (email)</dt>
-              <dd className="mt-1 font-medium text-ink-900">{me.data?.email ?? "—"}</dd>
+              <dd className="mt-1 font-medium text-ink-900">{me.data?.email ?? "-"}</dd>
             </div>
             <div>
               <dt className="text-xs uppercase tracking-wide text-ink-400">Role</dt>
               <dd className="mt-1">
                 <span className="text-xs font-semibold uppercase text-brand-600">
-                  {me.data?.role ?? "—"}
+                  {me.data?.role ?? "-"}
                 </span>
               </dd>
             </div>

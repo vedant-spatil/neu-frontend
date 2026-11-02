@@ -24,7 +24,7 @@ export default function TopNav() {
 
   return (
     <>
-      <header className="flex h-16 items-center justify-between gap-4 px-4 sm:px-6 md:px-8">
+      <header className="sticky top-0 z-40 flex h-16 items-center justify-between gap-4 bg-page/95 px-4 backdrop-blur sm:px-6 md:px-8">
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -37,7 +37,13 @@ export default function TopNav() {
               <path d={menuOpen ? MENU_PATH.close : MENU_PATH.open} />
             </svg>
           </button>
-          <span className="font-wordmark text-xl font-bold tracking-tight text-brand-600">NEU</span>
+          <NavLink
+            to="/"
+            aria-label="Dashboard"
+            className="font-wordmark text-xl font-bold tracking-tight text-brand-600"
+          >
+            NEU
+          </NavLink>
         </div>
 
         <div className="flex items-center gap-1 sm:gap-3">

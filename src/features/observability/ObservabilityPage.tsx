@@ -12,7 +12,7 @@ const WINDOWS = [
 
 /** A duration for display: milliseconds under a second, seconds above. Missing values show a dash. */
 export function formatMs(value: number | null | undefined): string {
-  if (value === null || value === undefined) return "—";
+  if (value === null || value === undefined) return "-";
   return value >= 1000 ? `${(value / 1000).toFixed(1)} s` : `${Math.round(value)} ms`;
 }
 
@@ -67,7 +67,7 @@ export default function ObservabilityPage() {
 
   const runs = d.case_runs ?? 0;
   const errors = d.errors ?? 0;
-  const errorRate = runs > 0 ? `${Math.round((errors / runs) * 100)}%` : "—";
+  const errorRate = runs > 0 ? `${Math.round((errors / runs) * 100)}%` : "-";
 
   return (
     <div className="space-y-6">
@@ -147,7 +147,7 @@ export default function ObservabilityPage() {
                       {r.case_id !== null ? (
                         <Link to={`/cases/${r.case_id}`} className="font-medium text-brand-600 hover:underline">#{r.case_id}</Link>
                       ) : (
-                        <span className="text-ink-400">—</span>
+                        <span className="text-ink-400">-</span>
                       )}
                     </td>
                     <td className="py-3">{r.attempt}</td>

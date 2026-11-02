@@ -24,6 +24,8 @@ const DashboardSchema = z.object({
   ),
   score_histogram: z.record(z.number()),
   failed_cases: z.number(),
+  // Admin only: alerts above threshold, and all transactions, for the alert rate card.
+  alert_rate: z.object({ alerts: z.number(), transactions: z.number() }).optional(),
 });
 
 const shortDay = (iso: string) => iso.slice(5); // "2022-09-01" -> "09-01"
@@ -105,13 +107,29 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* Row 1: cases and approvals, then the alert rules. */}
-      <div className="grid gap-6 xl:grid-cols-2">
-        <Card title="Cases opened and approvals, last 14 days" className="h-full">
+      {/* Row 1: cases and approvals, the alert rate (the same width as Decisions in row 2), then the alert rules. */}
+      <div className={`grid gap-6 ${isAdmin ? "xl:grid-cols-5" : ""}`}>
+        <Card title="Cases opened and approvals, last 14 days" className={`h-full ${isAdmin ? "xl:col-span-2" : ""}`}>
           <PairedBars rows={activityRows} seriesA="Cases opened" seriesB="Approved" empty="No case activity yet." />
         </Card>
         {isAdmin && (
-          <Card title="Alerts above threshold by rule" className="h-full">
+          <Card title="Alert rate" className="h-full xl:col-span-1">
+            {d.alert_rate && d.alert_rate.transactions > 0 ? (
+              <div className="flex h-full min-h-40 flex-col justify-center gap-2">
+                <p className="text-4xl font-semibold text-ink-900">
+                  {((d.alert_rate.alerts / d.alert_rate.transactions) * 100).toFixed(2)}%
+                </p>
+                <p className="text-sm text-ink-600">
+                  {d.alert_rate.alerts.toLocaleString()} alerts out of {d.alert_rate.transactions.toLocaleString()} transactions
+                </p>
+              </div>
+            ) : (
+              <EmptyState text="No transactions loaded yet." />
+            )}
+          </Card>
+        )}
+        {isAdmin && (
+          <Card title="Alerts above threshold by rule" className="h-full xl:col-span-2">
             <HorizontalBars rows={ruleRows} empty="No alerts above threshold." />
           </Card>
         )}
@@ -179,7 +197,7 @@ export default function Dashboard() {
                           <span className="font-semibold text-brand-600">{a.alerts}</span>
                         </td>
                         <td className="py-3 text-center">
-                          {a.case_status !== null ? <StatusBadge status={a.case_status} plain /> : <span className="text-ink-400">—</span>}
+                          {a.case_status !== null ? <StatusBadge status={a.case_status} plain /> : <span className="text-ink-400">-</span>}
                         </td>
                       </tr>
                     );

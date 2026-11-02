@@ -3,7 +3,7 @@ import { Card } from "./ui";
 
 type Props = { version: number; body: SarBody; identities?: Record<string, string> };
 
-const formatTime = (iso?: string) => (iso ? iso.replace("T", " ").slice(0, 16) : "—");
+const formatTime = (iso?: string) => (iso ? iso.replace("T", " ").slice(0, 16) : "-");
 
 /** The SAR draft as readable sections. The raw JSON stays behind a disclosure for auditors. */
 export default function SarView({ version, body, identities = {} }: Props) {
@@ -25,13 +25,13 @@ export default function SarView({ version, body, identities = {} }: Props) {
       <div className="space-y-5 text-sm text-ink-900">
         <div>
           <div className="text-xs uppercase tracking-wide text-ink-400">Subject</div>
-          <div className="mt-1 font-medium">{body.subject?.party_token ? named(body.subject.party_token) : "—"}</div>
+          <div className="mt-1 font-medium">{body.subject?.party_token ? named(body.subject.party_token) : "-"}</div>
         </div>
 
         <dl className="grid gap-4 sm:grid-cols-3">
           <div>
             <dt className="text-xs uppercase tracking-wide text-ink-400">Category</dt>
-            <dd className="mt-1 font-medium">{activity?.category ?? "—"}</dd>
+            <dd className="mt-1 font-medium">{activity?.category ?? "-"}</dd>
           </div>
           <div>
             <dt className="text-xs uppercase tracking-wide text-ink-400">Period</dt>
@@ -44,7 +44,7 @@ export default function SarView({ version, body, identities = {} }: Props) {
             <dd className="mt-1 font-semibold">
               {activity?.total_amount !== undefined
                 ? activity.total_amount.toLocaleString(undefined, { minimumFractionDigits: 2 })
-                : "—"}
+                : "-"}
             </dd>
           </div>
         </dl>

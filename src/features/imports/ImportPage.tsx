@@ -270,12 +270,12 @@ export default function ImportPage() {
           <div className="grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
             <Stat label="File" value={imp.data.filename} />
             <Stat label="Size" value={`${(imp.data.size_bytes / 1e6).toFixed(1)} MB`} />
-            <Stat label="Stage" value={typeof report.stage === "string" ? report.stage : "—"} />
-            <Stat label="Elapsed" value={typeof report.elapsed_s === "number" ? `${report.elapsed_s} s` : "—"} />
-            <Stat label="Rows loaded" value={typeof report.rows === "number" ? report.rows.toLocaleString() : "—"} />
-            <Stat label="Cases opened" value={typeof report.cases_opened === "number" ? report.cases_opened : "—"} />
-            <Stat label="Peak memory (API)" value={typeof report.process_peak_rss_mb === "number" ? `${report.process_peak_rss_mb} MB` : "—"} />
-            <Stat label="Rows checked" value={validation?.rows !== undefined ? validation.rows.toLocaleString() : "—"} />
+            <Stat label="Stage" value={typeof report.stage === "string" ? report.stage : "-"} />
+            <Stat label="Elapsed" value={typeof report.elapsed_s === "number" ? `${report.elapsed_s} s` : "-"} />
+            <Stat label="Rows loaded" value={typeof report.rows === "number" ? report.rows.toLocaleString() : "-"} />
+            <Stat label="Cases opened" value={typeof report.cases_opened === "number" ? report.cases_opened : "-"} />
+            <Stat label="Peak memory (API)" value={typeof report.process_peak_rss_mb === "number" ? `${report.process_peak_rss_mb} MB` : "-"} />
+            <Stat label="Rows checked" value={validation?.rows !== undefined ? validation.rows.toLocaleString() : "-"} />
           </div>
 
           {busy && (

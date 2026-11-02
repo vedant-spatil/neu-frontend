@@ -16,7 +16,7 @@ const FILTER_LABEL: Record<Filter, string> = { all: "All projects", ready: "With
 const NEXT_FILTER: Record<Filter, Filter> = { all: "ready", ready: "empty", empty: "all" };
 
 function formatDate(iso: string | null | undefined): string {
-  if (!iso) return "—";
+  if (!iso) return "-";
   return new Date(iso).toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" });
 }
 
@@ -89,15 +89,15 @@ export default function RecentProjects() {
       )}
 
       {rows.length > 0 && (
-        <div className="overflow-x-auto rounded-xl ring-1 ring-line">
+        <div className="overflow-x-auto">
           <table className="w-full min-w-[30rem] text-sm">
-            <thead className="bg-page text-left text-ink-600">
-              <tr>
-                <th className="px-4 py-3 font-medium">Project</th>
-                <th className="py-3 font-medium">Status</th>
-                <th className="py-3 text-right font-medium">Members</th>
-                <th className="py-3 text-right font-medium">Accounts</th>
-                <th className="px-4 py-3 text-right font-medium">Created</th>
+            <thead>
+              <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-ink-400">
+                <th className="py-2 font-medium">Project</th>
+                <th className="py-2 font-medium">Status</th>
+                <th className="py-2 text-right font-medium">Members</th>
+                <th className="py-2 text-right font-medium">Accounts</th>
+                <th className="py-2 text-right font-medium">Created</th>
               </tr>
             </thead>
             <tbody>
@@ -107,9 +107,9 @@ export default function RecentProjects() {
                   <tr
                     key={p.id}
                     onClick={() => navigate(`${base}/${p.id}`)}
-                    className="cursor-pointer border-t border-line transition-colors hover:bg-page/60"
+                    className="cursor-pointer border-b border-line transition-colors last:border-0 hover:bg-page/60"
                   >
-                    <td className="px-4 py-3 font-semibold text-ink-900">
+                    <td className="py-3 font-semibold text-ink-900">
                       <Link to={`${base}/${p.id}`} onClick={(e) => e.stopPropagation()} className="hover:underline">
                         {p.name}
                       </Link>
@@ -124,7 +124,7 @@ export default function RecentProjects() {
                     </td>
                     <td className="py-3 text-right">{p.members ?? 0}</td>
                     <td className="py-3 text-right">{p.accounts ?? 0}</td>
-                    <td className="px-4 py-3 text-right text-ink-600">{formatDate(p.created_at)}</td>
+                    <td className="py-3 text-right text-ink-600">{formatDate(p.created_at)}</td>
                   </tr>
                 );
               })}

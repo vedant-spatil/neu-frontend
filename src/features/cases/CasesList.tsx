@@ -8,6 +8,7 @@ import { useMe } from "../../auth/useAuth";
 import { buttonClass, Card, ErrorState, PageHeader, StatusBadge } from "../../components/ui";
 import { validProjectName } from "../projects/helpers";
 import { useDebounced } from "../../lib/useDebounced";
+import { useToast } from "../../components/Toast";
 
 const STATUS_NAMES: Record<string, string> = {
   pending: "Not started",
@@ -65,7 +66,7 @@ export default function CasesList() {
   const [panelOpen, setPanelOpen] = useState(false);
   const [projectChoice, setProjectChoice] = useState<string>("new");
   const [newName, setNewName] = useState("");
-  const [result, setResult] = useState<string | null>(null);
+  const toast = useToast();
 
   const query = new URLSearchParams({
     offset: String(page * PAGE_SIZE),
@@ -98,7 +99,7 @@ export default function CasesList() {
       }));
     },
     onSuccess: (r) => {
-      setResult(
+      toast.success(
         `Added ${r.added.length} account${r.added.length === 1 ? "" : "s"} to ${r.project_name}. ` +
         `${r.already_present.length} already in the project` +
         (r.missing_case_ids.length ? `; ${r.missing_case_ids.length} case(s) not found.` : "."),
@@ -122,9 +123,9 @@ export default function CasesList() {
   useEffect(() => {
     if (wasRunning.current && !buildRunning) {
       const s = buildStatus.data;
-      if (s?.error) setResult(`Case build failed: ${s.error}`);
+      if (s?.error) toast.error(`Case build failed: ${s.error}`);
       else if (s?.summary) {
-        setResult(
+        toast.success(
           `Built cases: ${s.summary.created} new, ${s.summary.added} updated, ${s.summary.merged} merged, ` +
           `${s.summary.unchanged} unchanged` +
           (s.summary.deferred ? `, ${s.summary.deferred} waiting for a running case` : "") + ".",
@@ -134,16 +135,15 @@ export default function CasesList() {
       qc.invalidateQueries({ queryKey: ["dashboard"] });
     }
     wasRunning.current = buildRunning;
-  }, [buildRunning, buildStatus.data, qc]);
+  }, [buildRunning, buildStatus.data, qc, toast]);
 
   const build = useMutation({
     mutationFn: async () => { await api<unknown>("/api/cases/build", { method: "POST" }); },
     onSuccess: () => {
-      setResult(null);
       qc.invalidateQueries({ queryKey: ["cases-build-status"] });
     },
     onError: (e) => {
-      setResult(e instanceof ApiError && e.status === 409
+      toast.error(e instanceof ApiError && e.status === 409
         ? "A case build is already running."
         : "Could not start the case build.");
     },
@@ -156,13 +156,13 @@ export default function CasesList() {
     })),
     onSuccess: (r) => {
       const skipped = r.skipped.length;
-      setResult(`Started ${r.queued} audit timeline${r.queued === 1 ? "" : "s"}.` +
+      toast.success(`Started ${r.queued} audit timeline${r.queued === 1 ? "" : "s"}.` +
         (skipped ? ` ${skipped} skipped (not waiting to start).` : ""));
       setSelected(new Set());
       qc.invalidateQueries({ queryKey: ["cases"] });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
     },
-    onError: () => setResult("Could not start the audit timelines."),
+    onError: () => toast.error("Could not start the audit timelines."),
   });
 
   const totalPages = cases.data ? Math.max(1, Math.ceil(cases.data.total / PAGE_SIZE)) : 1;
@@ -252,9 +252,6 @@ export default function CasesList() {
             </div>
           </div>
         </Card>
-      )}
-      {result && (
-        <div className="rounded-xl bg-ok-50 px-4 py-3 text-sm text-ok-600" role="status">{result}</div>
       )}
       {cases.isError && <ErrorState text="Could not load cases." />}
       {cases.isLoading && <p className="text-ink-600">Loading cases...</p>}

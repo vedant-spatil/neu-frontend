@@ -10,10 +10,14 @@ type CaseEvent = z.infer<typeof EventSchema>;
 type Props = {
   caseId: number;
   polling: boolean;
-  /** The button is always shown. It is enabled only when canRerun is set (failed cases). */
+  /** The button is always shown. It is enabled only when canRerun is set. */
   onRerun?: () => void;
   canRerun?: boolean;
   rerunning?: boolean;
+  /** "Investigate" for a case that has not started, "Restart investigation" after that. */
+  actionLabel?: string;
+  /** Asked before the action runs. Omitted for an action that needs no confirmation. */
+  confirmMessage?: string;
 };
 
 /** Accounts named in an event's payload (grouping events list them). */
@@ -24,6 +28,9 @@ function accountsOf(e: CaseEvent): string[] {
 
 /** One plain line for a grouping event: who was added, merged or left out, and why. Null for other events. */
 function summary(e: CaseEvent): string | null {
+  if (e.kind === "incomplete" && Array.isArray(e.payload.failures)) {
+    return `Not completed: ${e.payload.failures.join(", ")}. Review before deciding, or restart the investigation.`;
+  }
   if (e.node !== "grouping") return null;
   const parts: string[] = [];
   const accounts = accountsOf(e);
@@ -42,7 +49,10 @@ function summary(e: CaseEvent): string | null {
 }
 
 // Append-only case_events for one case. Polls while the case is still running.
-export default function AuditTimeline({ caseId, polling, onRerun, canRerun = false, rerunning = false }: Props) {
+export default function AuditTimeline({
+  caseId, polling, onRerun, canRerun = false, rerunning = false,
+  actionLabel = "Restart investigation", confirmMessage,
+}: Props) {
   const eventsQ = useQuery({
     queryKey: ["events", caseId],
     queryFn: async () => z.array(EventSchema).parse(await api<unknown>(`/api/cases/${caseId}/events`)),
@@ -61,13 +71,13 @@ export default function AuditTimeline({ caseId, polling, onRerun, canRerun = fal
     <button
       type="button"
       disabled={!canRerun || rerunning}
-      title={canRerun ? undefined : "Only failed cases or cases awaiting review can be restarted"}
+      title={canRerun ? undefined : "Only cases that have not started, failed, or are awaiting review can be run"}
       onClick={() => {
-        if (window.confirm("Restart the investigation for this case? The earlier events are kept.")) onRerun();
+        if (!confirmMessage || window.confirm(confirmMessage)) onRerun();
       }}
       className={buttonClass("secondary")}
     >
-      Restart investigation
+      {actionLabel}
     </button>
   ) : undefined;
 

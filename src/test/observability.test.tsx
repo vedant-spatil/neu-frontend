@@ -30,7 +30,7 @@ describe("formatMs", () => {
   it("shows milliseconds under a second and seconds above, and a dash when missing", () => {
     expect(formatMs(420.4)).toBe("420 ms");
     expect(formatMs(8200)).toBe("8.2 s");
-    expect(formatMs(null)).toBe("—");
-    expect(formatMs(undefined)).toBe("—");
+    expect(formatMs(null)).toBe("-");
+    expect(formatMs(undefined)).toBe("-");
   });
 });

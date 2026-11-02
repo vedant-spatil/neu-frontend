@@ -67,6 +67,15 @@ export default function CaseDetail() {
     },
   });
 
+  // A case that has not started is investigated (the same run the cases list uses). After that the button restarts it.
+  const investigate = useMutation({
+    mutationFn: () => api("/api/cases/run", { method: "POST", body: JSON.stringify({ case_ids: [id] }) }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["case", id] });
+      qc.invalidateQueries({ queryKey: ["events", id] });
+    },
+  });
+
   if (caseQ.isLoading) return <p className="text-ink-600">Loading case...</p>;
   if (!caseQ.data) return <ErrorState text="Case not found." />;
 
@@ -133,9 +142,11 @@ export default function CaseDetail() {
         <AuditTimeline
           caseId={id}
           polling={status === "open"}
-          onRerun={() => rerun.mutate()}
-          canRerun={status === "failed" || status === "awaiting_review"}
-          rerunning={rerun.isPending}
+          actionLabel={status === "pending" ? "Investigate" : "Restart investigation"}
+          onRerun={status === "pending" ? () => investigate.mutate() : () => rerun.mutate()}
+          confirmMessage={status === "pending" ? undefined : "Restart the investigation for this case? The earlier events are kept."}
+          canRerun={status === "pending" || status === "failed" || status === "awaiting_review"}
+          rerunning={rerun.isPending || investigate.isPending}
         />
       </div>
 

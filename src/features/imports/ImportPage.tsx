@@ -5,6 +5,7 @@ import { z } from "zod";
 import { api } from "../../api/client";
 import FieldSelect from "../../components/FieldSelect";
 import { buttonClass, Card, ErrorState, PageHeader, StatusBadge, Stepper } from "../../components/ui";
+import CsvUploadDialog from "./CsvUploadDialog";
 import { saveSyncStarted, savedImportId, savedSyncStarted, startUpload, useUploadState } from "./importState";
 
 const ImportSchema = z.object({
@@ -54,6 +55,7 @@ export default function ImportPage() {
   // Progress shows for the import whose sync was started in this browser tab, or while a sync is running.
   const [syncStarted, setSyncStarted] = useState<number | null>(() => savedSyncStarted());
   const up = useUploadState();
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   const uploadSelected = () => {
     if (!file) return;
@@ -61,6 +63,7 @@ export default function ImportPage() {
       .then((id) => {
         setMapping({});
         setImportId(id);
+        setDialogOpen(false);
       })
       .catch(() => undefined); // the error is in the upload state and shown below
   };
@@ -141,7 +144,7 @@ export default function ImportPage() {
       <PageHeader title="Import transactions" />
 
       {up.busy && createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink-900/30 px-4">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-ink-900/30 px-4">
           <div role="dialog" aria-modal="true" aria-labelledby="upload-title"
                className="w-full max-w-xs rounded-2xl bg-white p-6 text-center shadow-lg ring-1 ring-line">
             <div className="flex justify-center">
@@ -162,20 +165,27 @@ export default function ImportPage() {
 
       <Card title="1. Upload">
         <div className="flex flex-wrap items-center gap-3 text-sm">
-          <input
-            type="file"
-            accept=".csv"
-            disabled={up.busy}
-            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-            className="text-ink-600 file:mr-3 file:rounded-lg file:border-0 file:bg-page file:px-3 file:py-2 file:text-ink-900"
-          />
-          <button disabled={!file || up.busy} onClick={uploadSelected} className={buttonClass()}>
-            Upload
+          <p className="text-ink-600">
+            {importId !== null ? <>Uploaded <span className="font-medium text-ink-900">{file?.name ?? "a CSV file"}</span></> : "No CSV uploaded yet."}
+          </p>
+          <button disabled={up.busy} onClick={() => setDialogOpen(true)} className={`ml-auto ${buttonClass()}`}>
+            {importId !== null ? "Replace CSV" : "Upload CSV"}
           </button>
         </div>
 
-        {up.error && <div className="mt-3"><ErrorState text={`Upload failed. ${up.error}`} /></div>}
+        {up.error && !dialogOpen && <div className="mt-3"><ErrorState text={`Upload failed. ${up.error}`} /></div>}
       </Card>
+
+      {dialogOpen && (
+        <CsvUploadDialog
+          file={file}
+          error={up.error}
+          saving={up.busy}
+          onPick={setFile}
+          onSave={uploadSelected}
+          onClose={() => setDialogOpen(false)}
+        />
+      )}
 
       {columns.data && (
         <Card title="2. Map columns">
@@ -260,12 +270,12 @@ export default function ImportPage() {
           <div className="grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
             <Stat label="File" value={imp.data.filename} />
             <Stat label="Size" value={`${(imp.data.size_bytes / 1e6).toFixed(1)} MB`} />
-            <Stat label="Stage" value={typeof report.stage === "string" ? report.stage : "—"} />
-            <Stat label="Elapsed" value={typeof report.elapsed_s === "number" ? `${report.elapsed_s} s` : "—"} />
-            <Stat label="Rows loaded" value={typeof report.rows === "number" ? report.rows.toLocaleString() : "—"} />
-            <Stat label="Cases opened" value={typeof report.cases_opened === "number" ? report.cases_opened : "—"} />
-            <Stat label="Peak memory (API)" value={typeof report.process_peak_rss_mb === "number" ? `${report.process_peak_rss_mb} MB` : "—"} />
-            <Stat label="Rows checked" value={validation?.rows !== undefined ? validation.rows.toLocaleString() : "—"} />
+            <Stat label="Stage" value={typeof report.stage === "string" ? report.stage : "-"} />
+            <Stat label="Elapsed" value={typeof report.elapsed_s === "number" ? `${report.elapsed_s} s` : "-"} />
+            <Stat label="Rows loaded" value={typeof report.rows === "number" ? report.rows.toLocaleString() : "-"} />
+            <Stat label="Cases opened" value={typeof report.cases_opened === "number" ? report.cases_opened : "-"} />
+            <Stat label="Peak memory (API)" value={typeof report.process_peak_rss_mb === "number" ? `${report.process_peak_rss_mb} MB` : "-"} />
+            <Stat label="Rows checked" value={validation?.rows !== undefined ? validation.rows.toLocaleString() : "-"} />
           </div>
 
           {busy && (
